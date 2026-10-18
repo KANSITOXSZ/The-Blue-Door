@@ -19,34 +19,48 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Configurar Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Instalar Build Tools y Platform del SDK
+      - name: Descargar e instalar Android SDK Manual
         run: |
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          cd $HOME/android-sdk/cmdline-tools
+          # Descarga las herramientas de consola oficiales de Google
+          wget https://google.com
+          unzip commandlinetools-linux-11076708_latest.zip
+          mv cmdline-tools latest
+          
+          # Configurar variables de entorno indispensables para Godot
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools" >> $GITHUB_ENV
 
-      - name: Descargar e Instalar Godot 4.7.2 y sus Plantillas
+      - name: Aceptar Licencias e Instalar Componentes
         run: |
-          # Descargar Editor Headless
+          # Acepta de forma automática las licencias obligatorias de Google
+          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+          # Instala los build tools requeridos
+          $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Descargar e Instalar Godot 4.7.2 y Plantillas
+        run: |
+          # Descarga el motor Godot versión Linux
           wget https://github.com
           unzip Godot_v4.7.2-stable_linux.x86_64.zip
           mv Godot_v4.7.2-stable_linux.x86_64 godot
           chmod +x godot
           
-          # Descargar Plantillas Oficiales
+          # Descarga e instala el pack de plantillas universales (.tpz)
           wget https://github.com
           mkdir -p ~/.local/share/godot/export_templates/4.7.2.stable
           unzip Godot_v4.7.2-stable_export_templates.tpz -d ~/.local/share/godot/export_templates/4.7.2.stable
           mv ~/.local/share/godot/export_templates/4.7.2.stable/templates/* ~/.local/share/godot/export_templates/4.7.2.stable/
 
-      - name: Crear carpetas de exportacion
-        run: |
-          mkdir -v -p build/android
+      - name: Crear carpeta de salida
+        run: mkdir -v -p build/android
 
-      - name: Exportar juego usando Godot
+      - name: Exportar videojuego a APK
         run: |
           ./godot --headless --export-release "Android" build/android/mi_juego.apk
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
       - name: Guardar el APK final como descarga
         uses: actions/upload-artifact@v4
