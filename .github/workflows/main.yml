@@ -9,7 +9,7 @@ jobs:
     name: Compilando Android en la nube
     runs-on: ubuntu-latest
     container:
-      image: barichello/godot-ci:4.3.0
+      image: barichello/godot-ci:4.7.2
     steps:
       - name: Descargar codigo fuente
         uses: actions/checkout@v4
