@@ -19,25 +19,16 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Descargar e instalar Android SDK Manual
-        run: |
-          mkdir -p $HOME/android-sdk/cmdline-tools
-          cd $HOME/android-sdk/cmdline-tools
-          # Descarga las herramientas de consola oficiales de Google
-          wget https://google.com
-          unzip commandlinetools-linux-11076708_latest.zip
-          mv cmdline-tools latest
-          
-          # Configurar variables de entorno indispensables para Godot
-          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools" >> $GITHUB_ENV
+      - name: Configurar Android SDK Oficial
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          build-tools: 34.0.0
 
-      - name: Aceptar Licencias e Instalar Componentes
+      - name: Configurar variables de entorno para Godot
         run: |
-          # Acepta de forma automática las licencias obligatorias de Google
-          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
-          # Instala los build tools requeridos
-          $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          echo "ANDROID_HOME=${{ env.ANDROID_HOME }}" >> $GITHUB_ENV
+          echo "PATH=$PATH:${{ env.ANDROID_HOME }}/cmdline-tools/latest/bin:${{ env.ANDROID_HOME }}/platform-tools" >> $GITHUB_ENV
 
       - name: Descargar e Instalar Godot 4.7.2 y Plantillas
         run: |
