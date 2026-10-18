@@ -17,6 +17,7 @@ var jugador: CharacterBody2D
 var puerta: Area2D
 var texto_nivel: Label
 var capa_interfaz: CanvasLayer
+var menu_capa: CanvasLayer      # menú principal (se borra al pulsar JUGAR)
 
 # Corazones
 var corazones_max = 3
@@ -92,6 +93,10 @@ func _ready():
 	crear_puerta_meta()
 	generar_mapa_procedural()
 
+	# Título de la ventana en PC y menú principal
+	get_window().title = "The Blue Door"
+	crear_menu_principal()
+
 
 # ==========================================
 # CONTROLES TÁCTILES (flechas en pantalla para teléfonos)
@@ -144,6 +149,69 @@ func crear_boton_tactil(accion: String, pos: Vector2, rotacion: float):
 	)
 
 	capa_interfaz.add_child(boton)
+
+
+# ==========================================
+# MENÚ PRINCIPAL
+# ==========================================
+# El juego queda en pausa detrás del menú hasta que se pulsa JUGAR.
+func crear_menu_principal():
+	get_tree().paused = true
+
+	menu_capa = CanvasLayer.new()
+	menu_capa.layer = 100  # por encima de todo lo demás
+	menu_capa.process_mode = Node.PROCESS_MODE_ALWAYS  # sigue funcionando en pausa
+	add_child(menu_capa)
+
+	# Fondo negro que cubre toda la pantalla
+	var fondo = ColorRect.new()
+	fondo.color = Color(0, 0, 0, 1)
+	menu_capa.add_child(fondo)
+	fondo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	var centro = CenterContainer.new()
+	menu_capa.add_child(centro)
+	centro.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	var caja = VBoxContainer.new()
+	caja.alignment = BoxContainer.ALIGNMENT_CENTER
+	caja.add_theme_constant_override("separation", 20)
+	centro.add_child(caja)
+
+	# Puerta azul decorativa
+	var puerta_deco = ColorRect.new()
+	puerta_deco.color = Color(0, 0.6, 1)
+	puerta_deco.custom_minimum_size = Vector2(60, 100)
+	puerta_deco.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	caja.add_child(puerta_deco)
+
+	var titulo = Label.new()
+	titulo.text = "THE BLUE DOOR"
+	titulo.add_theme_font_size_override("font_size", 72)
+	titulo.modulate = Color(0, 0.6, 1)
+	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caja.add_child(titulo)
+
+	var subtitulo = Label.new()
+	subtitulo.text = "PRE-ALPHA"
+	subtitulo.add_theme_font_size_override("font_size", 24)
+	subtitulo.modulate = Color(0.6, 0.6, 0.6)
+	subtitulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caja.add_child(subtitulo)
+
+	var boton_jugar = Button.new()
+	boton_jugar.text = "JUGAR"
+	boton_jugar.custom_minimum_size = Vector2(280, 80)
+	boton_jugar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	boton_jugar.add_theme_font_size_override("font_size", 40)
+	boton_jugar.pressed.connect(_on_jugar_pulsado)
+	caja.add_child(boton_jugar)
+	boton_jugar.grab_focus.call_deferred()  # en PC se puede pulsar con Enter
+
+
+func _on_jugar_pulsado():
+	menu_capa.queue_free()
+	get_tree().paused = false
 
 
 # ==========================================
