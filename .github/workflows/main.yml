@@ -88,6 +88,16 @@ jobs:
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey" >> "$GITHUB_ENV"
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android" >> "$GITHUB_ENV"
 
+      - name: Activar compresión ETC2/ASTC (Android la exige)
+        run: |
+          if grep -q '^textures/vram_compression/import_etc2_astc' project.godot; then
+            sed -i 's|^textures/vram_compression/import_etc2_astc.*|textures/vram_compression/import_etc2_astc=true|' project.godot
+          elif grep -q '^\[rendering\]' project.godot; then
+            sed -i '/^\[rendering\]/a textures/vram_compression/import_etc2_astc=true' project.godot
+          else
+            printf '\n[rendering]\n\ntextures/vram_compression/import_etc2_astc=true\n' >> project.godot
+          fi
+
       - name: Importar recursos del proyecto
         run: ./godot --headless --import || true
 
