@@ -160,3 +160,34 @@ jobs:
           name: Juego_Windows
           path: build/windows/
           if-no-files-found: error
+
+  # ==========================================================
+  # PUBLICAR UNA VERSIÓN (Release) CON LOS DOS ARCHIVOS
+  # ==========================================================
+  publicar:
+    name: Publicar versión
+    needs: [export-android, export-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # necesario para crear el Release
+
+    steps:
+      - name: Descargar los archivos generados
+        uses: actions/download-artifact@v4
+        with:
+          path: artefactos
+
+      - name: Crear el Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd artefactos
+          (cd Juego_Windows && zip -r ../Juego_Windows.zip .)
+          gh release create "pre-alfa-${{ github.run_number }}" \
+            Juego_Android_APK/juego.apk \
+            Juego_Windows.zip \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "Pre-alfa ${{ github.run_number }}" \
+            --notes "Descarga **juego.apk** para Android o **Juego_Windows.zip** para PC (descomprímelo y abre el .exe)." \
+            --prerelease
