@@ -17,7 +17,16 @@ var jugador: CharacterBody2D
 var puerta: Area2D
 var texto_nivel: Label
 var capa_interfaz: CanvasLayer
-var menu_capa: CanvasLayer      # menú principal (se borra al pulsar JUGAR)
+var menu_capa: CanvasLayer      # menú principal (se borra al elegir dispositivo)
+var menu_caja: VBoxContainer    # contenido del menú (cambia entre pantallas)
+
+# Velocidad del personaje según el dispositivo elegido en el menú
+# (igual en PC y teléfono: más lento en los niveles 11 a 15, donde se pierde fácil)
+var velocidad_normal = 300.0
+var velocidad_lenta = 240.0
+var nivel_lento_desde = 11
+var nivel_lento_hasta = 15
+var velocidad_jugador = 300.0
 
 # Corazones
 var corazones_max = 3
@@ -148,6 +157,7 @@ func crear_boton_tactil(accion: String, pos: Vector2, rotacion: float):
 		fondo.color = Color(0, 0, 0, 0.9)
 	)
 
+	boton.add_to_group("botones_tactiles")
 	capa_interfaz.add_child(boton)
 
 
@@ -174,6 +184,7 @@ func crear_menu_principal():
 	centro.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var caja = VBoxContainer.new()
+	menu_caja = caja
 	caja.alignment = BoxContainer.ALIGNMENT_CENTER
 	caja.add_theme_constant_override("separation", 20)
 	centro.add_child(caja)
@@ -210,6 +221,52 @@ func crear_menu_principal():
 
 
 func _on_jugar_pulsado():
+	# Segunda pantalla del menú: ¿En qué juegas?
+	for hijo in menu_caja.get_children():
+		hijo.queue_free()
+
+	var pregunta = Label.new()
+	pregunta.text = "¿En qué juegas?"
+	pregunta.add_theme_font_size_override("font_size", 56)
+	pregunta.modulate = Color(0, 0.6, 1)
+	pregunta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	menu_caja.add_child(pregunta)
+
+	var boton_pc = crear_boton_menu("PC")
+	boton_pc.pressed.connect(_elegir_dispositivo.bind("pc"))
+
+	var boton_telefono = crear_boton_menu("TELÉFONO")
+	boton_telefono.pressed.connect(_elegir_dispositivo.bind("telefono"))
+
+	boton_pc.grab_focus.call_deferred()
+
+
+func crear_boton_menu(texto: String) -> Button:
+	var boton = Button.new()
+	boton.text = texto
+	boton.custom_minimum_size = Vector2(320, 80)
+	boton.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	boton.add_theme_font_size_override("font_size", 40)
+	menu_caja.add_child(boton)
+	return boton
+
+
+# Velocidad según el nivel: 220 del 11 al 15, 300 en el resto (en PC y teléfono)
+func actualizar_velocidad():
+	if nivel_actual >= nivel_lento_desde and nivel_actual <= nivel_lento_hasta:
+		velocidad_jugador = velocidad_lenta
+	else:
+		velocidad_jugador = velocidad_normal
+	if jugador:
+		jugador.set("velocidad", velocidad_jugador)
+
+
+# El dispositivo solo decide si se muestran los botones táctiles
+func _elegir_dispositivo(dispositivo: String):
+	# Los botones táctiles solo se ven en la versión de teléfono
+	for boton in get_tree().get_nodes_in_group("botones_tactiles"):
+		boton.visible = dispositivo == "telefono"
+
 	menu_capa.queue_free()
 	get_tree().paused = false
 
@@ -550,6 +607,7 @@ func generar_mapa_procedural():
 		crear_jugador_auxiliar()
 
 	actualizar_luz()
+	actualizar_velocidad()
 
 
 # ==========================================
@@ -847,6 +905,8 @@ func crear_jugador_auxiliar():
 	script_jugador.source_code = """
 extends CharacterBody2D
 
+var velocidad = 300.0
+
 func _physics_process(delta):
 	var dir = Vector2.ZERO
 	if Input.is_action_pressed("ui_right"):
@@ -858,9 +918,10 @@ func _physics_process(delta):
 	if Input.is_action_pressed("ui_up"):
 		dir.y -= 1
 
-	velocity = dir.normalized() * 300
+	velocity = dir.normalized() * velocidad
 	move_and_slide()
 """
 	script_jugador.reload()
 	jugador.set_script(script_jugador)
+	jugador.set("velocidad", velocidad_jugador)
 	add_child(jugador)
