@@ -1,0 +1,29 @@
+name: "Compilar APK de Godot"
+
+on:
+  push:
+    branches: [ "main", "master" ]
+
+jobs:
+  export-android:
+    name: Compilando Android en la nube
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.3.0
+    steps:
+      - name: Descargar codigo fuente
+        uses: actions/checkout@v4
+
+      - name: Crear carpetas de exportacion
+        run: |
+          mkdir -v -p build/android
+
+      - name: Exportar juego usando Godot
+        run: |
+          godot --headless --export-release "Android" build/android/mi_juego.apk
+
+      - name: Guardar el APK final como descarga
+        uses: actions/upload-artifact@v4
+        with:
+          name: Juego_Android_APK
+          path: build/android/mi_juego.apk
