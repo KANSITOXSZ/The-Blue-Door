@@ -8,11 +8,37 @@ jobs:
   export-android:
     name: Compilando Android en la nube
     runs-on: ubuntu-latest
-    container:
-      image: barichello/godot-ci:4.7.2
+
     steps:
       - name: Descargar codigo fuente
         uses: actions/checkout@v4
+
+      - name: Configurar Java (JDK)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar Build Tools y Platform del SDK
+        run: |
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Descargar e Instalar Godot 4.7.2 y sus Plantillas
+        run: |
+          # Descargar Editor Headless
+          wget https://github.com
+          unzip Godot_v4.7.2-stable_linux.x86_64.zip
+          mv Godot_v4.7.2-stable_linux.x86_64 godot
+          chmod +x godot
+          
+          # Descargar Plantillas Oficiales
+          wget https://github.com
+          mkdir -p ~/.local/share/godot/export_templates/4.7.2.stable
+          unzip Godot_v4.7.2-stable_export_templates.tpz -d ~/.local/share/godot/export_templates/4.7.2.stable
+          mv ~/.local/share/godot/export_templates/4.7.2.stable/templates/* ~/.local/share/godot/export_templates/4.7.2.stable/
 
       - name: Crear carpetas de exportacion
         run: |
@@ -20,7 +46,7 @@ jobs:
 
       - name: Exportar juego usando Godot
         run: |
-          godot --headless --export-release "Android" build/android/mi_juego.apk
+          ./godot --headless --export-release "Android" build/android/mi_juego.apk
 
       - name: Guardar el APK final como descarga
         uses: actions/upload-artifact@v4
