@@ -6,7 +6,9 @@ var plantilla_pared = preload("res://pared.tscn")
 # CONFIGURACIÓN Y VARIABLES DEL JUEGO
 # ==========================================
 var nivel_actual = 1
-var nivel_final = 25          # Al terminar este nivel se acaba la Alpha
+var nivel_final = 35          # Al terminar este nivel se acaba la Alpha
+var nivel_slime = 26          # Niveles 26 a 35: slimes y bloques fantasma
+var nivel_fuego = 31          # Desde este nivel hay bloques de fuego en el camino del disparo
 var nivel_corazones = 11      # Desde este nivel se activan corazones y bloques rojos
 var nivel_oscuridad = 16      # Desde este nivel todo está oscuro y hace falta la linterna
 var nivel_memoria = 21        # Niveles 21 a 25: al tomar la linterna se ve el mapa 3 s y hay que memorizarlo
@@ -76,6 +78,17 @@ var partida_en_curso = false    # true mientras se juega (para guardar al salir 
 var pausa_capa: CanvasLayer
 var boton_pausa: Button         # botón de pausa "||" (solo en la opción de teléfono)
 var consola_capa: CanvasLayer
+
+# Slime (niveles 26 a 35): empuja contra un slime y suéltalo. Cuanto más tiempo cargues, más lejos sales disparado
+var tiempo_slime = 3.0           # a los 3 s sale disparado solo (fuerza máxima)
+var velocidad_impulso = 1000.0   # velocidad del disparo
+var tiempos_impulso = [0.35, 0.6, 0.8]  # 1 s, 2 s y 3 s de carga = unos 350, 600 y 800 píxeles
+var slime_actual: Node = null    # slime contra el que estás empujando
+var slime_dir = Vector2.ZERO     # dirección en la que empujas
+var slime_tiempo = 0.0           # segundos que llevas cargando
+var impulsando = false           # true mientras sales disparado
+var texto_slime: Label           # contador sobre el personaje
+var texto_tutorial: Label        # mini tutorial del nivel 26
 var consola_aviso: Label
 var debug_activo = false        # true: atraviesas paredes y los rojos no hacen daño
 var texto_debug: Label
@@ -95,18 +108,23 @@ var lista_mods = [
 	},
 	{
 		"id": "ilp", "letras": "ILP", "nombre": "I love pink",
-		"desc": "White blocks turn pink :3  and red blocks turn purple >:3",
+		"desc": "White blocks turn pink :3, red blocks turn purple >:3 and slimes turn sky blue",
 		"fondo": Color(1, 0.55, 0.75), "texto": Color(0.3, 0.05, 0.2),
 	},
 	{
 		"id": "ily", "letras": "ILY", "nombre": "I love yellow",
-		"desc": "White blocks turn yellow and red blocks turn orange",
+		"desc": "White blocks turn yellow, red blocks turn orange and slimes turn lime",
 		"fondo": Color(0.93, 0.85, 0.5), "texto": Color(0.3, 0.2, 0),
 	},
 	{
 		"id": "ilg", "letras": "ILG", "nombre": "I love green",
-		"desc": "White blocks turn dark green and red blocks turn light green",
+		"desc": "White blocks turn dark green, red blocks turn light green and slimes turn teal",
 		"fondo": Color(0.1, 0.4, 0.15), "texto": Color(0.85, 1, 0.85),
+	},
+	{
+		"id": "ilb", "letras": "ILB", "nombre": "I love blue",
+		"desc": "White blocks turn very dark blue, red blocks turn dark sky blue and slimes turn violet",
+		"fondo": Color(0.02, 0.05, 0.2), "texto": Color(0.5, 0.7, 1),
 	},
 ]
 
@@ -176,6 +194,20 @@ func _ready():
 	texto_debug.modulate = Color(0.3, 1, 0.3)
 	texto_debug.visible = false
 	capa_interfaz.add_child(texto_debug)
+
+	# Contador del slime (sigue al personaje) y texto del mini tutorial
+	texto_slime = Label.new()
+	texto_slime.scale = Vector2(2.5, 2.5)
+	texto_slime.modulate = Color(0.4, 1, 0.4)
+	texto_slime.visible = false
+	capa_interfaz.add_child(texto_slime)
+
+	texto_tutorial = Label.new()
+	texto_tutorial.position = Vector2(200, 85)
+	texto_tutorial.scale = Vector2(1.6, 1.6)
+	texto_tutorial.modulate = Color(1, 1, 0.5)
+	texto_tutorial.visible = false
+	capa_interfaz.add_child(texto_tutorial)
 
 	crear_boton_pausa()
 	crear_controles_tactiles()
@@ -335,7 +367,7 @@ func mostrar_pantalla_principal():
 	menu_caja.add_child(puerta_deco)
 
 	crear_etiqueta_menu("THE BLUE DOOR", 72, Color(0, 0.6, 1))
-	crear_etiqueta_menu("ALPHA 1.0", 24, Color(0.6, 0.6, 0.6))
+	crear_etiqueta_menu("ALPHA 2.0", 24, Color(0.6, 0.6, 0.6))
 
 	var fila = HBoxContainer.new()
 	fila.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -383,6 +415,7 @@ func _on_puerta_menu_click(event):
 
 # Cierra el juego (en PC cierra la ventana, en teléfono vuelve al sistema)
 func _on_salir_pulsado():
+	guardar_logros()  # se guarda el mod de la última vez
 	get_tree().quit()
 
 
@@ -418,7 +451,7 @@ func crear_boton_en(padre: Node, texto: String, ancho: int, alto: int, fuente: i
 # MODS: lista con foto (letras), descripción y botón INSTALAR / USAR / ACTIVO
 func _on_mods_pulsado(logro_nuevo = false):
 	limpiar_menu()
-	menu_caja.add_theme_constant_override("separation", 12)
+	menu_caja.add_theme_constant_override("separation", 6)  # 5 mods: menos espacio para que quepan
 	crear_etiqueta_menu("MODS", 52, Color(0, 0.6, 1))
 
 	for mod in lista_mods:
@@ -448,11 +481,11 @@ func crear_fila_mod(mod: Dictionary):
 	# Foto del mod: un cuadro de color con sus letras
 	var foto = ColorRect.new()
 	foto.color = mod["fondo"]
-	foto.custom_minimum_size = Vector2(84, 84)  # más chica para que quepan 4 mods
+	foto.custom_minimum_size = Vector2(66, 66)  # chica para que quepan 5 mods
 	fila.add_child(foto)
 	var letras = Label.new()
 	letras.text = mod["letras"]
-	letras.add_theme_font_size_override("font_size", 34 if mod["letras"].length() <= 3 else 26)
+	letras.add_theme_font_size_override("font_size", 28 if mod["letras"].length() <= 3 else 22)
 	letras.add_theme_color_override("font_color", mod["texto"])
 	letras.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	letras.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -466,18 +499,18 @@ func crear_fila_mod(mod: Dictionary):
 	fila.add_child(textos)
 	var nombre = Label.new()
 	nombre.text = mod["nombre"]
-	nombre.add_theme_font_size_override("font_size", 32)
+	nombre.add_theme_font_size_override("font_size", 28)
 	nombre.modulate = Color(1, 1, 1)
 	textos.add_child(nombre)
 	var desc = Label.new()
 	desc.text = mod["desc"]
-	desc.add_theme_font_size_override("font_size", 20)
+	desc.add_theme_font_size_override("font_size", 18)
 	desc.modulate = Color(0.65, 0.65, 0.65)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	textos.add_child(desc)
 
 	# Botón según el estado del mod
-	var boton = crear_boton_en(fila, "", 200, 64, 26)
+	var boton = crear_boton_en(fila, "", 200, 54, 24)
 	if mod["id"] == mod_activo:
 		boton.text = "ACTIVO"
 		boton.disabled = true
@@ -520,6 +553,10 @@ func obtener_skin(rojo: bool):
 			if rojo:
 				return {"color": Color(0.5, 0.8, 0.5), "cara": ""}  # verde claro suave
 			return {"color": Color(0.1, 0.4, 0.15), "cara": ""}  # verde oscuro
+		"ilb":
+			if rojo:
+				return {"color": Color(0.2, 0.5, 0.75), "cara": ""}  # celeste oscuro
+			return {"color": Color(0.02, 0.04, 0.18), "cara": ""}  # azul muy oscuro
 	return null
 
 
@@ -733,6 +770,10 @@ func actualizar_corazones():
 
 
 func _physics_process(delta):
+	# Niveles 26 a 35: bloques slime
+	if nivel_actual >= nivel_slime:
+		procesar_slime(delta)
+
 	# Niveles 21 a 25: durante unos segundos se ve todo el mapa para memorizarlo
 	if tiempo_revelado > 0:
 		tiempo_revelado -= delta
@@ -759,7 +800,8 @@ func _physics_process(delta):
 		return
 
 	# Solo desde el nivel 11: revisamos si el jugador toca un bloque rojo
-	if nivel_actual < nivel_corazones or jugador == null or tiempo_invulnerable > 0 or reiniciando or debug_activo:
+	# (mientras sales disparado por un slime vuelas por encima y no recibes daño)
+	if nivel_actual < nivel_corazones or jugador == null or tiempo_invulnerable > 0 or reiniciando or debug_activo or impulsando:
 		return
 	for rojo in get_tree().get_nodes_in_group("rojos"):
 		if rojo.is_queued_for_deletion():
@@ -781,7 +823,9 @@ func recibir_dano():
 		# Sin corazones: vuelves al nivel 11 (o al 21 si estabas en los niveles de memoria)
 		# con corazones nuevos y un mapa nuevo.
 		# "reiniciando" bloquea el daño hasta que el jugador reaparezca.
-		if nivel_actual >= nivel_memoria:
+		if nivel_actual >= nivel_slime:
+			nivel_actual = nivel_slime
+		elif nivel_actual >= nivel_memoria:
 			nivel_actual = nivel_memoria
 		else:
 			nivel_actual = nivel_corazones
@@ -863,6 +907,13 @@ func generar_mapa_procedural():
 		negro.queue_free()
 	for linterna in get_tree().get_nodes_in_group("linternas"):
 		linterna.queue_free()
+	for slime in get_tree().get_nodes_in_group("slimes"):
+		slime.queue_free()
+	for pasa in get_tree().get_nodes_in_group("pasas"):
+		pasa.queue_free()
+	for flecha in get_tree().get_nodes_in_group("flechas"):
+		flecha.queue_free()
+	reiniciar_slime()
 	hay_secreto = false
 
 	# Nuevo nivel / reaparición: sin invencibilidad pendiente y daño activado de nuevo
@@ -877,15 +928,16 @@ func generar_mapa_procedural():
 		tiempo_invulnerable = 3.0
 		texto_invencible.visible = true
 
-	var es_oscuro = nivel_actual >= nivel_oscuridad
+	# Los niveles 26 a 35 (slime) tienen luz normal: no hay linterna
+	var es_oscuro = nivel_actual >= nivel_oscuridad and nivel_actual < nivel_slime
 	var es_memoria = nivel_actual >= nivel_memoria
 
 	# Al empezar el nivel 11 (o reaparecer en él) empieza el intento de Hitbox master
 	if nivel_actual == nivel_corazones:
 		dano_en_rojos = false
 
-	# Al entrar a los niveles de memoria (21) los corazones se reinician
-	if nivel_actual == nivel_memoria:
+	# Al entrar a los niveles de memoria (21) y de slime (26) los corazones se reinician
+	if nivel_actual == nivel_memoria or nivel_actual == nivel_slime:
 		corazones = corazones_max
 		actualizar_corazones()
 
@@ -900,6 +952,13 @@ func generar_mapa_procedural():
 
 	# El cartel WARNING solo se ve en el nivel 10
 	texto_warning.visible = nivel_actual == 10
+
+	# NIVELES 26 A 35: mapa especial con slimes y bloques fantasma
+	texto_tutorial.visible = false
+	if nivel_actual >= nivel_slime:
+		generar_nivel_slime()
+		terminar_generacion()
+		return
 
 	# Matriz virtual (0 = libre, 1 = pared normal, 2 = bloque rojo,
 	# 3 = pared traspasable, 4 = bloque negro)
@@ -1051,6 +1110,11 @@ func generar_mapa_procedural():
 			elif mapa_virtual[x][y] == 4:
 				crear_bloque_negro(x, y)
 
+	terminar_generacion()
+
+
+# Final común de todos los niveles: jugador, luz, velocidad y debug
+func terminar_generacion():
 	# Reposicionamos al jugador
 	if jugador:
 		jugador.position = Vector2(96, 5 * tamaño_bloque + 32)
@@ -1061,6 +1125,343 @@ func generar_mapa_procedural():
 	actualizar_velocidad()
 	if debug_activo:
 		aplicar_debug()  # las paredes del nivel nuevo también se atraviesan
+
+
+# ==========================================
+# NIVELES 26 A 35: SLIME, BLOQUES FANTASMA, FUEGO Y TUTORIAL
+# ==========================================
+# Cada nivel es una fila de "salas" separadas por muros con un bloque fantasma.
+# El bloque fantasma solo se puede cruzar mientras sales disparado por un slime.
+# Cada sala tiene su slime pegado al muro de la izquierda, en la misma fila que el
+# bloque fantasma de su muro: empuja contra el slime y salta hacia él.
+# La fuerza del disparo depende de los segundos que cargues (1, 2 o 3).
+func generar_nivel_slime():
+	# Tamaño de cada sala (celdas libres entre el slime y el muro).
+	# Se mezclan en orden aleatorio en cada intento, pero siempre hay camino de un slime al siguiente.
+	# Sala de 1 a 5 = basta 1 s de carga, de 7 a 9 = hacen falta 2 s, de 10 a 12 = hacen falta 3 s.
+	var planos_gaps = {
+		26: [9],
+		27: [6, 4],
+		28: [4, 2, 2],
+		29: [3, 2, 1, 1],
+		30: [2, 1, 1, 1, 1],
+		31: [7, 4],
+		32: [12, 1],
+		33: [4, 7],
+		34: [9, 3],
+		35: [11, 2],
+	}
+	var gaps = planos_gaps.get(nivel_actual, [2, 1, 1, 1, 1]).duplicate()
+	if nivel_actual != nivel_slime:
+		gaps.shuffle()  # el nivel 26 es el tutorial y siempre es igual
+
+	# Columna de cada muro según los tamaños de sala
+	var puertas = []
+	var inicio_sala = 0
+	for g in gaps:
+		var w = inicio_sala + g + 1
+		puertas.append(w)
+		inicio_sala = w + 1
+	var n = puertas.size()
+
+	# Fila por la que se cruza cada muro (distinta a la del muro anterior)
+	var filas_paso = []
+	for k in range(n):
+		var f = randi_range(1, filas - 2)
+		if nivel_actual == nivel_slime:
+			f = 5  # el tutorial es recto
+		while k > 0 and f == filas_paso[k - 1]:
+			f = randi_range(1, filas - 2)
+		filas_paso.append(f)
+
+	# Muros con su bloque fantasma
+	for k in range(n):
+		for y in range(filas):
+			if y == filas_paso[k]:
+				crear_bloque_pasa(puertas[k], y)
+			else:
+				colocar_pared(puertas[k], y)
+
+	# Slimes: el primero al borde izquierdo y los demás pegados al muro anterior
+	for k in range(n):
+		var col_slime = 0 if k == 0 else puertas[k - 1] + 1
+		crear_slime(col_slime, filas_paso[k])
+
+	# Bloques de fuego (niveles 31 a 35): ocupan la fila del disparo antes del bloque fantasma.
+	# Si te impulsas poco caes en el fuego; si te impulsas mucho pasas volando por encima.
+	if nivel_actual >= nivel_fuego:
+		for k in range(n):
+			var col_slime_f = 0 if k == 0 else puertas[k - 1] + 1
+			for x in range(col_slime_f + 3, puertas[k]):
+				colocar_bloque_rojo(x, filas_paso[k])
+
+	# Bloques rojos sueltos en las salas (desde el nivel 28). Nunca tapan la fila de aterrizaje,
+	# la fila del disparo ni la columna junto al slime, así que siempre hay camino.
+	var rojos_total = 0
+	if nivel_actual >= 28:
+		rojos_total = mini((nivel_actual - 27) * 2, 12)
+	var celdas_rojas = []
+	for k in range(n):
+		var lo = 0 if k == 0 else puertas[k - 1] + 1
+		var hi = puertas[k] - 1
+		for x in range(lo + 2, hi + 1):
+			for y in range(filas):
+				if y == filas_paso[k] or (k > 0 and y == filas_paso[k - 1]):
+					continue
+				if k == 0 and (y == 5 or x < 3):
+					continue
+				celdas_rojas.append(Vector2i(x, y))
+	celdas_rojas.shuffle()
+	for i in range(min(rojos_total, celdas_rojas.size())):
+		colocar_bloque_rojo(celdas_rojas[i].x, celdas_rojas[i].y)
+
+	# Mini tutorial del nivel 26: texto y flechas parpadeantes
+	if nivel_actual == nivel_slime:
+		texto_tutorial.text = "Push into the SLIME: 1, 2 or 3 s = more power"
+		texto_tutorial.visible = true
+		# Flechas hacia atrás, hacia el slime
+		for x in [215, 150, 85]:
+			crear_flecha_tutorial(Vector2(x, 4 * tamaño_bloque + 32), false)
+		# Flechas hacia adelante, hacia el bloque fantasma
+		for x in [420, 490, 560]:
+			crear_flecha_tutorial(Vector2(x, 4 * tamaño_bloque + 32), true)
+	elif nivel_actual == nivel_fuego:
+		texto_tutorial.text = "Fire! Hold longer to fly over it"
+		texto_tutorial.visible = true
+
+
+func color_slime() -> Color:
+	# Cada texture pack tiene su color de slime para combinar
+	match mod_activo:
+		"ilp":
+			return Color(0.45, 0.8, 1.0)   # celeste
+		"ily":
+			return Color(0.65, 0.85, 0.35)  # verde lima
+		"ilg":
+			return Color(0.2, 0.75, 0.75)   # turquesa
+		"ilb":
+			return Color(0.7, 0.45, 1.0)    # violeta
+	return Color(0.25, 0.85, 0.3)           # verde slime
+
+
+func crear_slime(cx: int, cy: int):
+	var cuerpo = StaticBody2D.new()
+	cuerpo.add_to_group("slimes")
+	cuerpo.position = Vector2(cx * tamaño_bloque, cy * tamaño_bloque)
+
+	var grafico = ColorRect.new()
+	grafico.size = Vector2(tamaño_bloque, tamaño_bloque)
+	grafico.color = color_slime()
+	cuerpo.add_child(grafico)
+
+	# Brillo y carita para que se vea como un slime
+	var brillo = ColorRect.new()
+	brillo.size = Vector2(tamaño_bloque - 12, 10)
+	brillo.position = Vector2(6, 5)
+	brillo.color = Color(1, 1, 1, 0.3)
+	cuerpo.add_child(brillo)
+	for ojo_x in [18, 40]:
+		var ojo = ColorRect.new()
+		ojo.size = Vector2(9, 11)
+		ojo.position = Vector2(ojo_x, 24)
+		ojo.color = Color(1, 1, 1)
+		cuerpo.add_child(ojo)
+		var pupila = ColorRect.new()
+		pupila.size = Vector2(4, 5)
+		pupila.position = Vector2(ojo_x + 3, 28)
+		pupila.color = Color(0, 0, 0)
+		cuerpo.add_child(pupila)
+
+	var colision = CollisionShape2D.new()
+	var forma = RectangleShape2D.new()
+	forma.size = Vector2(tamaño_bloque, tamaño_bloque)
+	colision.shape = forma
+	colision.position = Vector2(tamaño_bloque / 2, tamaño_bloque / 2)
+	cuerpo.add_child(colision)
+	add_child(cuerpo)
+
+
+# Bloque fantasma: sólido, pero solo se atraviesa mientras sales disparado por un slime
+func crear_bloque_pasa(cx: int, cy: int):
+	var cuerpo = StaticBody2D.new()
+	cuerpo.add_to_group("pasas")
+	cuerpo.position = Vector2(cx * tamaño_bloque, cy * tamaño_bloque)
+
+	var c = color_slime()
+	var grafico = ColorRect.new()
+	grafico.size = Vector2(tamaño_bloque, tamaño_bloque)
+	grafico.color = Color(c.r, c.g, c.b, 0.4)
+	cuerpo.add_child(grafico)
+
+	# Borde del color del slime
+	var borde = ReferenceRect.new()
+	borde.size = Vector2(tamaño_bloque, tamaño_bloque)
+	borde.border_color = c
+	borde.border_width = 3.0
+	borde.editor_only = false
+	cuerpo.add_child(borde)
+
+	var colision = CollisionShape2D.new()
+	var forma = RectangleShape2D.new()
+	forma.size = Vector2(tamaño_bloque, tamaño_bloque)
+	colision.shape = forma
+	colision.position = Vector2(tamaño_bloque / 2, tamaño_bloque / 2)
+	cuerpo.add_child(colision)
+	add_child(cuerpo)
+
+
+# Flecha parpadeante del tutorial
+func crear_flecha_tutorial(pos: Vector2, hacia_derecha: bool):
+	var flecha = Polygon2D.new()
+	flecha.add_to_group("flechas")
+	var puntos = PackedVector2Array([Vector2(-14, -12), Vector2(14, 0), Vector2(-14, 12)])
+	if not hacia_derecha:
+		puntos = PackedVector2Array([Vector2(14, -12), Vector2(-14, 0), Vector2(14, 12)])
+	flecha.polygon = puntos
+	flecha.position = pos
+	flecha.color = Color(1, 1, 0.4)
+	add_child(flecha)
+
+	var tween = flecha.create_tween().set_loops()
+	tween.tween_property(flecha, "modulate:a", 0.15, 0.45)
+	tween.tween_property(flecha, "modulate:a", 1.0, 0.45)
+
+
+# ---------- Lógica del slime ----------
+func reiniciar_slime():
+	slime_actual = null
+	slime_tiempo = 0.0
+	impulsando = false
+	if texto_slime:
+		texto_slime.visible = false
+	if jugador:
+		jugador.set("tiempo_impulso", 0.0)
+		jugador.set("impulso", Vector2.ZERO)
+
+
+func cancelar_cuenta_slime():
+	slime_actual = null
+	slime_tiempo = 0.0
+	texto_slime.visible = false
+
+
+func procesar_slime(delta):
+	if jugador == null:
+		return
+
+	# Mientras sales disparado: se revisa cuándo termina el impulso
+	if impulsando:
+		var restante = float(jugador.get("tiempo_impulso"))
+		if restante <= 0.0:
+			if jugador_dentro_de_pasa():
+				jugador.set("tiempo_impulso", 0.05)  # sigue hasta salir del bloque fantasma
+			else:
+				terminar_impulso()
+		return
+
+	if debug_activo or reiniciando:
+		cancelar_cuenta_slime()
+		return
+
+	# Direcciones que se están pulsando
+	var dirs = []
+	var der = Input.is_action_pressed("ui_right")
+	var izq = Input.is_action_pressed("ui_left")
+	var aba = Input.is_action_pressed("ui_down")
+	var arr = Input.is_action_pressed("ui_up")
+	if der and not izq:
+		dirs.append(Vector2(1, 0))
+	if izq and not der:
+		dirs.append(Vector2(-1, 0))
+	if aba and not arr:
+		dirs.append(Vector2(0, 1))
+	if arr and not aba:
+		dirs.append(Vector2(0, -1))
+
+	# ¿Estás tocando un slime y empujando hacia él?
+	var slime_tocado: Node = null
+	var dir_tocada = Vector2.ZERO
+	for d in dirs:
+		for s in get_tree().get_nodes_in_group("slimes"):
+			if s.is_queued_for_deletion():
+				continue
+			var rel = s.position + Vector2(tamaño_bloque / 2, tamaño_bloque / 2) - jugador.position
+			var toca = false
+			if d.x != 0:
+				toca = absf(rel.y) < 40 and absf(rel.x) <= 60 and signf(rel.x) == d.x
+			else:
+				toca = absf(rel.x) < 40 and absf(rel.y) <= 60 and signf(rel.y) == d.y
+			if toca:
+				slime_tocado = s
+				dir_tocada = d
+				break
+		if slime_tocado != null:
+			break
+
+	# Dejaste de empujar: si cargaste al menos 1 s, sales disparado con esa fuerza
+	if slime_tocado == null:
+		if slime_actual != null and slime_tiempo >= 1.0:
+			lanzar_jugador()
+		else:
+			cancelar_cuenta_slime()
+		return
+
+	# Cargando: la cuenta sube hasta 3 s
+	if slime_tocado != slime_actual or dir_tocada != slime_dir:
+		slime_actual = slime_tocado
+		slime_dir = dir_tocada
+		slime_tiempo = 0.0
+	slime_tiempo = minf(slime_tiempo + delta, tiempo_slime)
+	texto_slime.visible = true
+	texto_slime.text = str(int(slime_tiempo))
+	texto_slime.position = jugador.position + Vector2(-10, -80)
+
+	if slime_tiempo >= tiempo_slime:
+		lanzar_jugador()
+
+
+# El slime te dispara hacia el lado contrario. La fuerza depende de los segundos cargados (1, 2 o 3)
+func lanzar_jugador():
+	var fuerza = clampi(int(slime_tiempo), 1, 3)
+	var duracion = float(tiempos_impulso[fuerza - 1])
+	var centro = slime_actual.position + Vector2(tamaño_bloque / 2, tamaño_bloque / 2)
+	# Te alineamos con el slime para que el disparo pase justo por el bloque fantasma
+	if slime_dir.x != 0:
+		jugador.position.y = centro.y
+	else:
+		jugador.position.x = centro.x
+	jugador.set("impulso", -slime_dir * velocidad_impulso)
+	jugador.set("tiempo_impulso", duracion)
+	impulsando = true
+	cancelar_cuenta_slime()
+
+	# Mientras vuelas atraviesas los bloques fantasma
+	for pasa in get_tree().get_nodes_in_group("pasas"):
+		if pasa is PhysicsBody2D:
+			jugador.add_collision_exception_with(pasa)
+
+	if nivel_actual == nivel_slime:
+		texto_tutorial.text = "Ghost blocks can only be crossed while you fly!"
+
+
+func terminar_impulso():
+	impulsando = false
+	if debug_activo:
+		return  # con debug los fantasmas siempre se atraviesan
+	for pasa in get_tree().get_nodes_in_group("pasas"):
+		if pasa is PhysicsBody2D and not pasa.is_queued_for_deletion():
+			jugador.remove_collision_exception_with(pasa)
+
+
+func jugador_dentro_de_pasa() -> bool:
+	var caja_jugador = Rect2(jugador.position - Vector2(25, 25), Vector2(50, 50)).grow(2)
+	for pasa in get_tree().get_nodes_in_group("pasas"):
+		if pasa.is_queued_for_deletion():
+			continue
+		var caja = Rect2(pasa.position, Vector2(tamaño_bloque, tamaño_bloque))
+		if caja_jugador.intersects(caja):
+			return true
+	return false
 
 
 # ==========================================
@@ -1251,6 +1652,7 @@ func cargar_partida():
 # Si se cierra la ventana o la app pasa a segundo plano jugando, también se guarda
 func _notification(what):
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:
+		guardar_logros()  # guarda el mod activo, los logros y el nombre aunque no estés jugando
 		if partida_en_curso:
 			guardar_partida()
 
@@ -1339,7 +1741,24 @@ func _on_comando(texto: String):
 		else:
 			mostrar_mensaje("DEBUG: OFF", Color(1, 0.4, 0.4), 440)
 	else:
-		consola_aviso.text = "Unknown command"
+		# Un número (o "tp 12") te teletransporta a ese nivel
+		var numero = texto.strip_edges().to_lower().trim_prefix("tp").strip_edges()
+		if numero.is_valid_int() and int(numero) >= 1 and int(numero) <= nivel_final:
+			teletransportar_a_nivel(int(numero))
+		else:
+			consola_aviso.text = "Unknown command (type a level 1-%d)" % nivel_final
+
+
+# Salta directamente a un nivel (solo desde la consola)
+func teletransportar_a_nivel(nivel: int):
+	cerrar_consola()
+	nivel_actual = nivel
+	texto_nivel.text = "NIVEL: " + str(nivel_actual)
+	# Saltarte el nivel 11 cuenta como no haberlo jugado: no se puede ganar Hitbox master así
+	if nivel_actual > nivel_lento_desde and nivel_actual <= nivel_lento_hasta:
+		dano_en_rojos = true
+	generar_mapa_procedural.call_deferred()
+	mostrar_mensaje.call_deferred("TP: LEVEL %d" % nivel, Color(0.4, 0.8, 1), 430)
 
 
 # Con debug activo el jugador ignora las paredes y los bloques negros
@@ -1347,7 +1766,8 @@ func _on_comando(texto: String):
 func aplicar_debug():
 	if jugador == null:
 		return
-	var solidos = get_tree().get_nodes_in_group("paredes") + get_tree().get_nodes_in_group("negros")
+	var solidos = get_tree().get_nodes_in_group("paredes") + get_tree().get_nodes_in_group("negros") \
+		+ get_tree().get_nodes_in_group("pasas") + get_tree().get_nodes_in_group("slimes")
 	for bloque in solidos:
 		if bloque is PhysicsBody2D and not bloque.is_queued_for_deletion():
 			if debug_activo:
@@ -1476,7 +1896,7 @@ func crear_textura_luz() -> GradientTexture2D:
 func actualizar_luz():
 	if luz_jugador == null:
 		return
-	luz_jugador.enabled = nivel_actual >= nivel_oscuridad
+	luz_jugador.enabled = nivel_actual >= nivel_oscuridad and nivel_actual < nivel_slime
 	# En los niveles de memoria (21 a 25) la luz siempre es pequeña: hay que recordar el mapa
 	if tiene_linterna and nivel_actual < nivel_memoria:
 		luz_jugador.texture_scale = 1.1
@@ -1586,7 +2006,7 @@ func crear_puerta_meta():
 func _on_puerta_tocada(body):
 	if body == jugador:
 		# En los niveles oscuros la puerta solo sirve con la linterna
-		if nivel_actual >= nivel_oscuridad and not tiene_linterna:
+		if nivel_actual >= nivel_oscuridad and nivel_actual < nivel_slime and not tiene_linterna:
 			mostrar_mensaje("NECESITAS LA LINTERNA", Color(1, 0.3, 0.3), 330)
 			return
 		# La puerta del último nivel termina la Alpha
@@ -1646,6 +2066,7 @@ func guardar_logros():
 
 
 # Pantalla final: "You finished the Alpha!" + logro ¿End?
+# Si ya tenías el logro ¿End?, no se muestra: vuelves directo al menú.
 func terminar_alpha():
 	var primera_vez = not logro_end
 	logro_end = true
@@ -1689,19 +2110,21 @@ func terminar_alpha():
 	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	caja.add_child(titulo)
 
-	var aviso = Label.new()
-	aviso.text = "ACHIEVEMENT UNLOCKED!" if primera_vez else "ACHIEVEMENT"
-	aviso.add_theme_font_size_override("font_size", 26)
-	aviso.modulate = Color(0.6, 0.6, 0.6)
-	aviso.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	caja.add_child(aviso)
+	# El logro solo se muestra la primera vez; después queda solo el título y el botón MENU
+	if primera_vez:
+		var aviso = Label.new()
+		aviso.text = "ACHIEVEMENT UNLOCKED!"
+		aviso.add_theme_font_size_override("font_size", 26)
+		aviso.modulate = Color(0.6, 0.6, 0.6)
+		aviso.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		caja.add_child(aviso)
 
-	var nombre_logro = Label.new()
-	nombre_logro.text = "¿End?"
-	nombre_logro.add_theme_font_size_override("font_size", 52)
-	nombre_logro.modulate = Color(1, 0.84, 0)
-	nombre_logro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	caja.add_child(nombre_logro)
+		var nombre_logro = Label.new()
+		nombre_logro.text = "¿End?"
+		nombre_logro.add_theme_font_size_override("font_size", 52)
+		nombre_logro.modulate = Color(1, 0.84, 0)
+		nombre_logro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		caja.add_child(nombre_logro)
 
 	var boton_menu = Button.new()
 	boton_menu.text = "MENU"
@@ -1773,8 +2196,17 @@ func crear_jugador_auxiliar():
 extends CharacterBody2D
 
 var velocidad = 300.0
+var impulso = Vector2.ZERO
+var tiempo_impulso = 0.0
 
 func _physics_process(delta):
+	# Disparo del slime: durante unos instantes el personaje sale volando
+	if tiempo_impulso > 0.0:
+		tiempo_impulso -= delta
+		velocity = impulso
+		move_and_slide()
+		return
+
 	var dir = Vector2.ZERO
 	if Input.is_action_pressed("ui_right"):
 		dir.x += 1
