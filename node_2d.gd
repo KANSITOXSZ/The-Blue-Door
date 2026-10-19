@@ -22,11 +22,13 @@ var menu_capa: CanvasLayer      # menú principal (se borra al elegir dispositiv
 var menu_caja: VBoxContainer    # contenido del menú (cambia entre pantallas)
 
 # Velocidad del personaje según el dispositivo elegido en el menú
-# (igual en PC y teléfono: más lento en los niveles 11 a 15, donde se pierde fácil)
+# (igual en PC y teléfono: más lento en los niveles 11 a 15 y 21 a 25, donde se pierde fácil)
 var velocidad_normal = 300.0
 var velocidad_lenta = 220.0
 var nivel_lento_desde = 11
 var nivel_lento_hasta = 15
+var nivel_lento2_desde = 21
+var nivel_lento2_hasta = 25
 var velocidad_jugador = 300.0
 
 # Corazones
@@ -57,6 +59,7 @@ var texto_memoria: Label
 # Logros (se guardan en el dispositivo, así que no se pierden al cerrar el juego)
 const ARCHIVO_LOGROS = "user://logros.cfg"
 var logro_end = false           # logro "¿End?": terminar la Alpha
+var logro_gold = false          # logro "Gold": conseguir el corazón dorado
 
 # Controles táctiles: true = solo se ven en teléfonos; false = se ven siempre (útil para probar)
 var botones_solo_en_movil = false
@@ -239,7 +242,17 @@ func mostrar_pantalla_principal():
 	var boton_mods = crear_boton_en(fila, "MODS", 220, 70, 30)
 	boton_mods.pressed.connect(_on_mods_pulsado)
 
+	# SALIR: debajo de JUGAR, un poco más pequeño
+	var boton_salir = crear_boton_en(menu_caja, "SALIR", 200, 60, 28)
+	boton_salir.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	boton_salir.pressed.connect(_on_salir_pulsado)
+
 	boton_jugar.grab_focus.call_deferred()  # en PC se puede pulsar con Enter
+
+
+# Cierra el juego (en PC cierra la ventana, en teléfono vuelve al sistema)
+func _on_salir_pulsado():
+	get_tree().quit()
 
 
 # Quita lo que hay en el menú para mostrar otra pantalla
@@ -279,7 +292,7 @@ func _on_mods_pulsado():
 
 
 # LOGROS: 3 espacios. Los que no se han descubierto muestran "..."
-# En la Alpha 1.0 solo existe el logro "¿End?" (los otros dos todavía no existen).
+# Logro 1: "¿End?" (terminar la Alpha). Logro 2: "Gold" (conseguir el corazón dorado).
 func _on_logros_pulsado():
 	limpiar_menu()
 	crear_etiqueta_menu("LOGROS", 64, Color(0, 0.6, 1))
@@ -289,7 +302,13 @@ func _on_logros_pulsado():
 		crear_etiqueta_menu("Finish the Alpha", 22, Color(0.6, 0.6, 0.6))
 	else:
 		crear_etiqueta_menu("...", 44, Color(0.6, 0.6, 0.6))
-	crear_etiqueta_menu("...", 44, Color(0.6, 0.6, 0.6))
+
+	if logro_gold:
+		crear_etiqueta_menu("Gold", 44, Color(1, 0.84, 0))
+		crear_etiqueta_menu("Heart of gold!", 22, Color(0.6, 0.6, 0.6))
+	else:
+		crear_etiqueta_menu("...", 44, Color(0.6, 0.6, 0.6))
+
 	crear_etiqueta_menu("...", 44, Color(0.6, 0.6, 0.6))
 
 	var volver = crear_boton_menu("VOLVER")
@@ -328,9 +347,11 @@ func crear_boton_menu(texto: String) -> Button:
 	return boton
 
 
-# Velocidad según el nivel: 220 del 11 al 15, 300 en el resto (en PC y teléfono)
+# Velocidad según el nivel: 220 del 11 al 15 y del 21 al 25, 300 en el resto (en PC y teléfono)
 func actualizar_velocidad():
-	if nivel_actual >= nivel_lento_desde and nivel_actual <= nivel_lento_hasta:
+	var tramo_lento_1 = nivel_actual >= nivel_lento_desde and nivel_actual <= nivel_lento_hasta
+	var tramo_lento_2 = nivel_actual >= nivel_lento2_desde and nivel_actual <= nivel_lento2_hasta
+	if tramo_lento_1 or tramo_lento_2:
 		velocidad_jugador = velocidad_lenta
 	else:
 		velocidad_jugador = velocidad_normal
@@ -791,7 +812,16 @@ func _on_dorado_tocado(body, area):
 	corazones_visuales[3].visible = true
 	actualizar_corazones()
 	area.queue_free()
-	mostrar_mensaje("¡CORAZÓN DORADO!", Color(1, 0.84, 0), 380)
+
+	# Logro "Gold": se guarda en el dispositivo
+	var primera_vez = not logro_gold
+	logro_gold = true
+	guardar_logros()
+
+	if primera_vez:
+		mostrar_mensaje("GOLDEN HEART!  ACHIEVEMENT: Gold", Color(1, 0.84, 0), 250)
+	else:
+		mostrar_mensaje("GOLDEN HEART!", Color(1, 0.84, 0), 400)
 
 
 func colocar_bloque_rojo(x, y):
@@ -961,15 +991,19 @@ func _on_puerta_tocada(body):
 # ==========================================
 # FINAL DE LA ALPHA Y LOGROS
 # ==========================================
+# Al abrir el juego se lee el archivo guardado en el dispositivo
+# para saber qué logros ya se consiguieron antes.
 func cargar_logros():
 	var archivo = ConfigFile.new()
 	if archivo.load(ARCHIVO_LOGROS) == OK:
 		logro_end = archivo.get_value("logros", "end", false)
+		logro_gold = archivo.get_value("logros", "gold", false)
 
 
 func guardar_logros():
 	var archivo = ConfigFile.new()
 	archivo.set_value("logros", "end", logro_end)
+	archivo.set_value("logros", "gold", logro_gold)
 	archivo.save(ARCHIVO_LOGROS)
 
 
