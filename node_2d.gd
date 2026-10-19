@@ -6,9 +6,10 @@ var plantilla_pared = preload("res://pared.tscn")
 # CONFIGURACIÓN Y VARIABLES DEL JUEGO
 # ==========================================
 var nivel_actual = 1
-var nivel_final = 20          # No hay más niveles después de este
+var nivel_final = 25          # Al terminar este nivel se acaba la Alpha
 var nivel_corazones = 11      # Desde este nivel se activan corazones y bloques rojos
 var nivel_oscuridad = 16      # Desde este nivel todo está oscuro y hace falta la linterna
+var nivel_memoria = 21        # Niveles 21 a 25: al tomar la linterna se ve el mapa 3 s y hay que memorizarlo
 var tamaño_bloque = 64
 var columnas = 18
 var filas = 10
@@ -23,7 +24,7 @@ var menu_caja: VBoxContainer    # contenido del menú (cambia entre pantallas)
 # Velocidad del personaje según el dispositivo elegido en el menú
 # (igual en PC y teléfono: más lento en los niveles 11 a 15, donde se pierde fácil)
 var velocidad_normal = 300.0
-var velocidad_lenta = 240.0
+var velocidad_lenta = 220.0
 var nivel_lento_desde = 11
 var nivel_lento_hasta = 15
 var velocidad_jugador = 300.0
@@ -48,6 +49,15 @@ var oscuridad: CanvasModulate
 var luz_jugador: PointLight2D
 var tiene_linterna = false
 
+# Niveles de memoria (21 a 25)
+var tiempo_memoria = 3.0        # segundos que se ve el mapa al tomar la linterna
+var tiempo_revelado = 0.0       # segundos de visibilidad que quedan
+var texto_memoria: Label
+
+# Logros (se guardan en el dispositivo, así que no se pierden al cerrar el juego)
+const ARCHIVO_LOGROS = "user://logros.cfg"
+var logro_end = false           # logro "¿End?": terminar la Alpha
+
 # Controles táctiles: true = solo se ven en teléfonos; false = se ven siempre (útil para probar)
 var botones_solo_en_movil = false
 
@@ -56,6 +66,7 @@ var ultimo_camino: Array = []
 
 func _ready():
 	randomize()
+	cargar_logros()
 
 	# Pantalla adaptable: el juego (1152 x 640) se escala a PC y teléfonos
 	var ventana = get_window()
@@ -96,6 +107,14 @@ func _ready():
 	texto_warning.modulate = Color(1, 0.8, 0)
 	texto_warning.visible = false
 	capa_interfaz.add_child(texto_warning)
+
+	# Cuenta regresiva para memorizar el mapa (niveles 21 a 25)
+	texto_memoria = Label.new()
+	texto_memoria.position = Vector2(380, 85)
+	texto_memoria.scale = Vector2(2.5, 2.5)
+	texto_memoria.modulate = Color(1, 0.9, 0.2)
+	texto_memoria.visible = false
+	capa_interfaz.add_child(texto_memoria)
 
 	crear_controles_tactiles()
 	crear_corazones_interfaz()
@@ -189,35 +208,93 @@ func crear_menu_principal():
 	caja.add_theme_constant_override("separation", 20)
 	centro.add_child(caja)
 
+	mostrar_pantalla_principal()
+
+
+# Pantalla principal: título y una fila con LOGROS (izquierda), JUGAR (centro) y MODS (derecha)
+func mostrar_pantalla_principal():
+	limpiar_menu()
+
 	# Puerta azul decorativa
 	var puerta_deco = ColorRect.new()
 	puerta_deco.color = Color(0, 0.6, 1)
 	puerta_deco.custom_minimum_size = Vector2(60, 100)
 	puerta_deco.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	caja.add_child(puerta_deco)
+	menu_caja.add_child(puerta_deco)
 
-	var titulo = Label.new()
-	titulo.text = "THE BLUE DOOR"
-	titulo.add_theme_font_size_override("font_size", 72)
-	titulo.modulate = Color(0, 0.6, 1)
-	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	caja.add_child(titulo)
+	crear_etiqueta_menu("THE BLUE DOOR", 72, Color(0, 0.6, 1))
+	crear_etiqueta_menu("ALPHA 1.0", 24, Color(0.6, 0.6, 0.6))
 
-	var subtitulo = Label.new()
-	subtitulo.text = "PRE-ALPHA"
-	subtitulo.add_theme_font_size_override("font_size", 24)
-	subtitulo.modulate = Color(0.6, 0.6, 0.6)
-	subtitulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	caja.add_child(subtitulo)
+	var fila = HBoxContainer.new()
+	fila.alignment = BoxContainer.ALIGNMENT_CENTER
+	fila.add_theme_constant_override("separation", 30)
+	menu_caja.add_child(fila)
 
-	var boton_jugar = Button.new()
-	boton_jugar.text = "JUGAR"
-	boton_jugar.custom_minimum_size = Vector2(280, 80)
-	boton_jugar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	boton_jugar.add_theme_font_size_override("font_size", 40)
+	var boton_logros = crear_boton_en(fila, "LOGROS", 220, 70, 30)
+	boton_logros.pressed.connect(_on_logros_pulsado)
+
+	var boton_jugar = crear_boton_en(fila, "JUGAR", 280, 80, 40)
 	boton_jugar.pressed.connect(_on_jugar_pulsado)
-	caja.add_child(boton_jugar)
+
+	var boton_mods = crear_boton_en(fila, "MODS", 220, 70, 30)
+	boton_mods.pressed.connect(_on_mods_pulsado)
+
 	boton_jugar.grab_focus.call_deferred()  # en PC se puede pulsar con Enter
+
+
+# Quita lo que hay en el menú para mostrar otra pantalla
+func limpiar_menu():
+	for hijo in menu_caja.get_children():
+		menu_caja.remove_child(hijo)
+		hijo.queue_free()
+
+
+func crear_etiqueta_menu(texto: String, tamano: int, color: Color) -> Label:
+	var etiqueta = Label.new()
+	etiqueta.text = texto
+	etiqueta.add_theme_font_size_override("font_size", tamano)
+	etiqueta.modulate = color
+	etiqueta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	menu_caja.add_child(etiqueta)
+	return etiqueta
+
+
+func crear_boton_en(padre: Node, texto: String, ancho: int, alto: int, fuente: int) -> Button:
+	var boton = Button.new()
+	boton.text = texto
+	boton.custom_minimum_size = Vector2(ancho, alto)
+	boton.add_theme_font_size_override("font_size", fuente)
+	padre.add_child(boton)
+	return boton
+
+
+# MODS: por ahora está vacío
+func _on_mods_pulsado():
+	limpiar_menu()
+	crear_etiqueta_menu("MODS", 64, Color(0, 0.6, 1))
+	crear_etiqueta_menu("Nothing here...", 36, Color(0.6, 0.6, 0.6))
+	var volver = crear_boton_menu("VOLVER")
+	volver.pressed.connect(mostrar_pantalla_principal)
+	volver.grab_focus.call_deferred()
+
+
+# LOGROS: 3 espacios. Los que no se han descubierto muestran "..."
+# En la Alpha 1.0 solo existe el logro "¿End?" (los otros dos todavía no existen).
+func _on_logros_pulsado():
+	limpiar_menu()
+	crear_etiqueta_menu("LOGROS", 64, Color(0, 0.6, 1))
+
+	if logro_end:
+		crear_etiqueta_menu("¿End?", 44, Color(1, 0.84, 0))
+		crear_etiqueta_menu("Finish the Alpha", 22, Color(0.6, 0.6, 0.6))
+	else:
+		crear_etiqueta_menu("...", 44, Color(0.6, 0.6, 0.6))
+	crear_etiqueta_menu("...", 44, Color(0.6, 0.6, 0.6))
+	crear_etiqueta_menu("...", 44, Color(0.6, 0.6, 0.6))
+
+	var volver = crear_boton_menu("VOLVER")
+	volver.pressed.connect(mostrar_pantalla_principal)
+	volver.grab_focus.call_deferred()
 
 
 func _on_jugar_pulsado():
@@ -312,6 +389,15 @@ func actualizar_corazones():
 
 
 func _physics_process(delta):
+	# Niveles 21 a 25: durante unos segundos se ve todo el mapa para memorizarlo
+	if tiempo_revelado > 0:
+		tiempo_revelado -= delta
+		if tiempo_revelado <= 0:
+			oscuridad.color = Color(0, 0, 0)  # vuelve la oscuridad
+			texto_memoria.visible = false
+		else:
+			texto_memoria.text = "¡MEMORIZA!  %.1f" % tiempo_revelado
+
 	# Cuenta regresiva de invencibilidad + parpadeo del personaje
 	if tiempo_invulnerable > 0:
 		tiempo_invulnerable -= delta
@@ -344,9 +430,13 @@ func recibir_dano():
 	actualizar_corazones()
 
 	if corazones <= 0:
-		# Sin corazones: vuelves al nivel 11 con corazones nuevos.
+		# Sin corazones: vuelves al nivel 11 (o al 21 si estabas en los niveles de memoria)
+		# con corazones nuevos y un mapa nuevo.
 		# "reiniciando" bloquea el daño hasta que el jugador reaparezca.
-		nivel_actual = nivel_corazones
+		if nivel_actual >= nivel_memoria:
+			nivel_actual = nivel_memoria
+		else:
+			nivel_actual = nivel_corazones
 		texto_nivel.text = "NIVEL: " + str(nivel_actual)
 		reiniciando = true
 		terminar_invencibilidad()
@@ -440,10 +530,17 @@ func generar_mapa_procedural():
 		texto_invencible.visible = true
 
 	var es_oscuro = nivel_actual >= nivel_oscuridad
-	var es_final = nivel_actual >= nivel_final
+	var es_memoria = nivel_actual >= nivel_memoria
+
+	# Al entrar a los niveles de memoria (21) los corazones se reinician
+	if nivel_actual == nivel_memoria:
+		corazones = corazones_max
+		actualizar_corazones()
 
 	# En cada nivel oscuro hay que volver a encontrar la linterna
 	tiene_linterna = false
+	tiempo_revelado = 0.0
+	texto_memoria.visible = false
 	oscuridad.color = Color(0, 0, 0) if es_oscuro else Color(1, 1, 1)
 
 	# Los corazones solo se ven desde el nivel 11
@@ -464,10 +561,10 @@ func generar_mapa_procedural():
 	var camino_prehecho = {}
 	var camino_orden = []
 
-	var camino_recto = nivel_actual == 10 or nivel_actual == 15 or es_final
+	# Camino recto en los niveles 10, 15, 20 y 25 (la puerta siempre está abierta)
+	var camino_recto = nivel_actual >= 10 and nivel_actual % 5 == 0
 	if camino_recto:
-		# Camino recto: niveles 10 y 15 (puerta ABIERTA) y nivel final (puerta TAPADA)
-		var ultima_col = columnas - 3 if es_final else columnas - 1
+		var ultima_col = columnas - 1
 		for x in range(ultima_col + 1):
 			agregar_camino(camino_prehecho, camino_orden, Vector2i(x, 5))
 	else:
@@ -488,11 +585,11 @@ func generar_mapa_procedural():
 				y += paso
 		agregar_camino(camino_prehecho, camino_orden, Vector2i(columnas - 1, 5))
 
-	# Niveles con rojos (11 al 15): tramos estrechos totalmente rodeados de rojo
-	var con_rojos = nivel_actual >= nivel_corazones and not es_oscuro
+	# Niveles con rojos (11 al 15 y 21 al 25): tramos estrechos totalmente rodeados de rojo
+	var con_rojos = nivel_actual >= nivel_corazones and (not es_oscuro or es_memoria)
 	var forzadas_rojas = {}
 	if con_rojos and not camino_recto:
-		var cantidad_tramos = 2 + (nivel_actual - nivel_corazones)  # 11 -> 2 ... 14 -> 5
+		var cantidad_tramos = min(2 + (nivel_actual - nivel_corazones), 6)  # 11 -> 2 ... 14 -> 5, máximo 6
 		for t in range(cantidad_tramos):
 			var largo = randi_range(4, 6)
 			var inicio = randi_range(3, max(3, camino_orden.size() - largo - 3))
@@ -507,7 +604,9 @@ func generar_mapa_procedural():
 
 	# Probabilidad de que una celda pegada al camino sea roja
 	var prob_rojo_cerca = 0.45
-	if nivel_actual == 15:
+	if es_memoria:
+		prob_rojo_cerca = 0.6
+	if nivel_actual == 15 or nivel_actual == 25:
 		prob_rojo_cerca = 0.85
 
 	# Relleno de la pantalla (el camino siempre queda libre)
@@ -527,7 +626,7 @@ func generar_mapa_procedural():
 					if camino_prehecho.has(Vector2i(x + dx, y + dy)):
 						pegada_al_camino = true
 
-			if es_oscuro:
+			if es_oscuro and not es_memoria:
 				# Camino de 1 celda de ancho: no hay forma de rodear los bloques negros
 				if pegada_al_camino or randf() < densidad_random:
 					mapa_virtual[x][y] = 1
@@ -576,17 +675,12 @@ func generar_mapa_procedural():
 		var idx_linterna = clampi(int(camino_orden.size() * 0.3), 4, camino_orden.size() - 8)
 		crear_linterna(camino_orden[idx_linterna])
 
-		var cantidad_negros = 3 if es_final else 2 + (nivel_actual - nivel_oscuridad)  # 16 -> 2 ... 19 -> 5
+		var cantidad_negros = 3 if camino_recto else min(2 + (nivel_actual - nivel_oscuridad), 5)  # 16 -> 2 ... máximo 5
 		var disponibles = range(idx_linterna + 3, camino_orden.size() - 3)
 		disponibles.shuffle()
 		for i in range(min(cantidad_negros, disponibles.size())):
 			var c = camino_orden[disponibles[i]]
 			mapa_virtual[c.x][c.y] = 4
-
-	# NIVEL FINAL: tapamos por completo la columna previa a la puerta
-	if es_final:
-		for y in range(filas):
-			mapa_virtual[columnas - 2][y] = 1
 
 	# Pintamos paredes, bloques rojos y bloques negros
 	for x in range(columnas):
@@ -742,7 +836,11 @@ func actualizar_luz():
 	if luz_jugador == null:
 		return
 	luz_jugador.enabled = nivel_actual >= nivel_oscuridad
-	luz_jugador.texture_scale = 1.1 if tiene_linterna else 0.35
+	# En los niveles de memoria (21 a 25) la luz siempre es pequeña: hay que recordar el mapa
+	if tiene_linterna and nivel_actual < nivel_memoria:
+		luz_jugador.texture_scale = 1.1
+	else:
+		luz_jugador.texture_scale = 0.35
 
 
 func crear_linterna(celda: Vector2i):
@@ -789,7 +887,14 @@ func _on_linterna_tomada(body, area):
 				hijo.color = Color(0.18, 0.18, 0.22)
 
 	actualizar_luz()
-	mostrar_mensaje("¡LINTERNA ENCONTRADA!", Color(1, 1, 0.6), 340)
+
+	if nivel_actual >= nivel_memoria:
+		# Niveles 21 a 25: se ve todo el mapa durante unos segundos para memorizarlo
+		tiempo_revelado = tiempo_memoria
+		oscuridad.color = Color(1, 1, 1)
+		texto_memoria.visible = true
+	else:
+		mostrar_mensaje("¡LINTERNA ENCONTRADA!", Color(1, 1, 0.6), 340)
 
 
 func crear_bloque_negro(x, y):
@@ -839,17 +944,103 @@ func crear_puerta_meta():
 # ==========================================
 func _on_puerta_tocada(body):
 	if body == jugador:
-		# No hay más niveles después del último
-		if nivel_actual >= nivel_final:
-			return
 		# En los niveles oscuros la puerta solo sirve con la linterna
 		if nivel_actual >= nivel_oscuridad and not tiene_linterna:
 			mostrar_mensaje("NECESITAS LA LINTERNA", Color(1, 0.3, 0.3), 330)
+			return
+		# La puerta del último nivel termina la Alpha
+		if nivel_actual >= nivel_final:
+			terminar_alpha.call_deferred()
 			return
 		nivel_actual += 1
 		texto_nivel.text = "NIVEL: " + str(nivel_actual)
 		# Diferido para no modificar la física dentro de la señal
 		generar_mapa_procedural.call_deferred()
+
+
+# ==========================================
+# FINAL DE LA ALPHA Y LOGROS
+# ==========================================
+func cargar_logros():
+	var archivo = ConfigFile.new()
+	if archivo.load(ARCHIVO_LOGROS) == OK:
+		logro_end = archivo.get_value("logros", "end", false)
+
+
+func guardar_logros():
+	var archivo = ConfigFile.new()
+	archivo.set_value("logros", "end", logro_end)
+	archivo.save(ARCHIVO_LOGROS)
+
+
+# Pantalla final: "You finished the Alpha!" + logro ¿End?
+func terminar_alpha():
+	var primera_vez = not logro_end
+	logro_end = true
+	guardar_logros()
+
+	get_tree().paused = true
+
+	var capa_fin = CanvasLayer.new()
+	capa_fin.layer = 100
+	capa_fin.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(capa_fin)
+
+	var fondo = ColorRect.new()
+	fondo.color = Color(0, 0, 0, 1)
+	capa_fin.add_child(fondo)
+	fondo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	var centro = CenterContainer.new()
+	capa_fin.add_child(centro)
+	centro.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	var caja = VBoxContainer.new()
+	caja.alignment = BoxContainer.ALIGNMENT_CENTER
+	caja.add_theme_constant_override("separation", 20)
+	centro.add_child(caja)
+
+	var puerta_deco = ColorRect.new()
+	puerta_deco.color = Color(0, 0.6, 1)
+	puerta_deco.custom_minimum_size = Vector2(60, 100)
+	puerta_deco.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	caja.add_child(puerta_deco)
+
+	var titulo = Label.new()
+	titulo.text = "YOU FINISHED THE ALPHA!"
+	titulo.add_theme_font_size_override("font_size", 64)
+	titulo.modulate = Color(0, 0.6, 1)
+	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caja.add_child(titulo)
+
+	var aviso = Label.new()
+	aviso.text = "ACHIEVEMENT UNLOCKED!" if primera_vez else "ACHIEVEMENT"
+	aviso.add_theme_font_size_override("font_size", 26)
+	aviso.modulate = Color(0.6, 0.6, 0.6)
+	aviso.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caja.add_child(aviso)
+
+	var nombre_logro = Label.new()
+	nombre_logro.text = "¿End?"
+	nombre_logro.add_theme_font_size_override("font_size", 52)
+	nombre_logro.modulate = Color(1, 0.84, 0)
+	nombre_logro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caja.add_child(nombre_logro)
+
+	var boton_menu = Button.new()
+	boton_menu.text = "MENU"
+	boton_menu.custom_minimum_size = Vector2(280, 80)
+	boton_menu.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	boton_menu.add_theme_font_size_override("font_size", 40)
+	boton_menu.pressed.connect(_volver_al_menu)
+	caja.add_child(boton_menu)
+	boton_menu.grab_focus.call_deferred()
+
+
+# Reinicia el juego desde el menú principal
+func _volver_al_menu():
+	get_tree().paused = false
+	get_tree().reload_current_scene()
 
 
 # ==========================================
