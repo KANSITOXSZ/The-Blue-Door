@@ -35,6 +35,7 @@ jobs:
             echo "::error::El preset se debe llamar exactamente Android (revisa Proyecto > Exportar)."
             exit 1
           fi
+
       - name: Configurar Java (JDK 17)
         uses: actions/setup-java@v4
         with:
@@ -50,6 +51,7 @@ jobs:
         run: |
           yes | sdkmanager --licenses > /dev/null || true
           sdkmanager --install "platform-tools" "build-tools;35.0.1" "platforms;android-35" "cmake;3.10.2.4988404" "ndk;28.1.13356709"
+
       - name: Instalar Godot y plantillas de exportación
         run: |
           BASE="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-${GODOT_RELEASE}"
@@ -62,12 +64,14 @@ jobs:
           mkdir -p "$TPL"
           unzip -q "Godot_v${GODOT_VERSION}-${GODOT_RELEASE}_export_templates.tpz" -d templates_tmp
           mv templates_tmp/templates/* "$TPL"/
+
       - name: Configurar Godot para exportar a Android
         run: |
           # Llave de depuración (sirve para instalar el APK directamente en un teléfono)
           keytool -genkey -v -keystore "$HOME/debug.keystore" -storepass android -keypass android \
             -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
             -dname "CN=Android Debug,O=Android,C=US"
+
           # Rutas de Java y del Android SDK en la configuración del editor
           mkdir -p "$HOME/.config/godot"
           printf '%s\n' \
@@ -78,10 +82,12 @@ jobs:
             "export/android/android_sdk_path = \"$ANDROID_HOME\"" \
             > "$HOME/.config/godot/editor_settings-4.tres"
           cp "$HOME/.config/godot/editor_settings-4.tres" "$HOME/.config/godot/editor_settings-4.7.tres"
+
           # Godot lee la llave de depuración desde estas variables de entorno
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$HOME/debug.keystore" >> "$GITHUB_ENV"
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey" >> "$GITHUB_ENV"
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android" >> "$GITHUB_ENV"
+
       - name: Activar compresión ETC2/ASTC (Android la exige)
         run: |
           if grep -q '^textures/vram_compression/import_etc2_astc' project.godot; then
@@ -91,6 +97,7 @@ jobs:
           else
             printf '\n[rendering]\n\ntextures/vram_compression/import_etc2_astc=true\n' >> project.godot
           fi
+
       - name: Importar recursos del proyecto
         run: ./godot --headless --import || true
 
@@ -99,6 +106,7 @@ jobs:
           mkdir -p build/android
           ./godot --headless --export-debug "Android" build/android/juego.apk
           ls -lh build/android
+
       - name: Guardar el APK como descarga
         uses: actions/upload-artifact@v4
         with:
@@ -123,6 +131,7 @@ jobs:
             echo "::error::Falta el preset Windows Desktop (Proyecto > Exportar > Añadir > Windows Desktop) y subir export_presets.cfg."
             exit 1
           fi
+
       - name: Instalar Godot y plantillas de exportación
         run: |
           BASE="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-${GODOT_RELEASE}"
@@ -135,6 +144,7 @@ jobs:
           mkdir -p "$TPL"
           unzip -q "Godot_v${GODOT_VERSION}-${GODOT_RELEASE}_export_templates.tpz" -d templates_tmp
           mv templates_tmp/templates/* "$TPL"/
+
       - name: Importar recursos del proyecto
         run: ./godot --headless --import || true
 
@@ -143,6 +153,7 @@ jobs:
           mkdir -p build/windows
           ./godot --headless --export-release "Windows Desktop" build/windows/juego.exe
           ls -lh build/windows
+
       - name: Guardar el juego de Windows como descarga
         uses: actions/upload-artifact@v4
         with:
@@ -172,11 +183,11 @@ jobs:
         run: |
           cd artefactos
           (cd Juego_Windows && zip -r ../Juego_Windows.zip .)
-          gh release create "pre-alfa-${{ github.run_number }}" \
+          gh release create "alpha-${{ github.run_number }}" \
             Juego_Android_APK/juego.apk \
             Juego_Windows.zip \
             --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" \
-            --title "Pre-alfa ${{ github.run_number }}" \
+            --title "The Blue Door - Alpha ${{ github.run_number }}" \
             --notes "Descarga **juego.apk** para Android o **Juego_Windows.zip** para PC (descomprímelo y abre el .exe)." \
             --prerelease
