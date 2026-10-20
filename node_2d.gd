@@ -6,7 +6,10 @@ var plantilla_pared = preload("res://pared.tscn")
 # CONFIGURACIÓN Y VARIABLES DEL JUEGO
 # ==========================================
 var nivel_actual = 1
-var nivel_final = 35          # Al terminar este nivel se acaba la Alpha
+var nivel_final = 40          # Al terminar este nivel se acaba la Alpha
+var nivel_armas = 36          # Desde este nivel tienes la pistola (niveles 36 a 40)
+var nivel_dash = 38           # Desde este nivel tienes el dash
+var nivel_jefe = 40           # Nivel del slime gigante
 var nivel_slime = 26          # Niveles 26 a 35: slimes y bloques fantasma
 var nivel_fuego = 31          # Desde este nivel hay bloques de fuego en el camino del disparo
 var nivel_corazones = 11      # Desde este nivel se activan corazones y bloques rojos
@@ -89,6 +92,33 @@ var slime_tiempo = 0.0           # segundos que llevas cargando
 var impulsando = false           # true mientras sales disparado
 var texto_slime: Label           # contador sobre el personaje
 var texto_tutorial: Label        # mini tutorial del nivel 26
+
+# Pistola, dash y jefe (niveles 36 a 40)
+var logro_slimekiller = false    # logro "Slime killer": matar al slime gigante del nivel 40
+var tiene_arma = false
+var tiene_dash = false
+var mirando = Vector2.RIGHT      # hacia dónde mira el personaje (dirección del disparo y del dash)
+var arma_nodo: Node2D            # dibujo de la pistola pegada al personaje
+var sprite_jugador: Sprite2D
+var fuego_cd = 0.0               # espera entre disparos
+var fuego_tactil = false         # botón F pulsado (teléfono)
+var dash_cd = 0.0                # espera entre dashes
+var dash_activo = 0.0            # segundos de invencibilidad que quedan del dash
+var boton_dash: TouchScreenButton
+var boton_fuego: TouchScreenButton
+var script_proyectil: GDScript
+var jefe: Area2D = null
+var jefe_vivo = false
+var jefe_vida_max = 40
+var jefe_vida = 40
+var jefe_tiempo = 0.0
+var jefe_cd = 2.0
+var jefe_barra_fondo: ColorRect
+var jefe_barra: ColorRect
+var jefe_nombre: Label
+var tutorial_dash_tiempo = 0.0
+var tutorial_dash_esquivadas = 0
+var tutorial_dash_activo = false
 var consola_aviso: Label
 var debug_activo = false        # true: atraviesas paredes y los rojos no hacen daño
 var texto_debug: Label
@@ -100,6 +130,7 @@ var campo_nombre: LineEdit
 # Mods: "base" = juego sin mods. Los demás hay que instalarlos desde la pestaña MODS.
 var mod_activo = "base"
 var mods_instalados: Array = ["base"]
+var pagina_mods = 0
 var lista_mods = [
 	{
 		"id": "base", "letras": "BASE", "nombre": "Base",
@@ -126,6 +157,11 @@ var lista_mods = [
 		"desc": "White blocks turn very dark blue, red blocks turn dark sky blue and slimes turn violet",
 		"fondo": Color(0.02, 0.05, 0.2), "texto": Color(0.5, 0.7, 1),
 	},
+	{
+		"id": "ils", "letras": "ILS", "nombre": "I LOVE SLIME",
+		"desc": "White blocks use the green slime model, red blocks and shots use red slime models",
+		"fondo": Color(0.25, 0.85, 0.3), "texto": Color(0.05, 0.2, 0.05),
+	},
 ]
 
 # Controles táctiles: true = solo se ven en teléfonos; false = se ven siempre (útil para probar)
@@ -136,6 +172,7 @@ var ultimo_camino: Array = []
 
 func _ready():
 	randomize()
+	agregar_teclas_wasd()
 	cargar_logros()
 
 	# Pantalla adaptable: el juego (1152 x 640) se escala a PC y teléfonos
@@ -189,7 +226,7 @@ func _ready():
 	# Aviso fijo mientras el modo debug está activo (abajo a la izquierda)
 	texto_debug = Label.new()
 	texto_debug.text = "DEBUG"
-	texto_debug.position = Vector2(25, 590)
+	texto_debug.position = Vector2(25, 520)  # arriba de los botones F y D
 	texto_debug.scale = Vector2(1.5, 1.5)
 	texto_debug.modulate = Color(0.3, 1, 0.3)
 	texto_debug.visible = false
@@ -209,7 +246,28 @@ func _ready():
 	texto_tutorial.visible = false
 	capa_interfaz.add_child(texto_tutorial)
 
+	# Barra de vida del slime gigante (nivel 40)
+	jefe_barra_fondo = ColorRect.new()
+	jefe_barra_fondo.color = Color(0, 0, 0, 0.8)
+	jefe_barra_fondo.position = Vector2(326, 70)
+	jefe_barra_fondo.size = Vector2(500, 24)
+	jefe_barra_fondo.visible = false
+	capa_interfaz.add_child(jefe_barra_fondo)
+	jefe_barra = ColorRect.new()
+	jefe_barra.position = Vector2(329, 73)
+	jefe_barra.size = Vector2(494, 18)
+	jefe_barra.color = Color(0.3, 0.9, 0.3)
+	jefe_barra.visible = false
+	capa_interfaz.add_child(jefe_barra)
+	jefe_nombre = Label.new()
+	jefe_nombre.text = "BIG SLIME"
+	jefe_nombre.position = Vector2(326, 96)
+	jefe_nombre.modulate = Color(0.8, 1, 0.8)
+	jefe_nombre.visible = false
+	capa_interfaz.add_child(jefe_nombre)
+
 	crear_boton_pausa()
+	crear_botones_accion()
 	crear_controles_tactiles()
 	crear_corazones_interfaz()
 	crear_puerta_meta()
@@ -218,6 +276,16 @@ func _ready():
 	# Título de la ventana en PC y menú principal
 	get_window().title = "The Blue Door"
 	crear_menu_principal()
+
+
+# En PC el personaje se mueve con las flechas o con WASD
+func agregar_teclas_wasd():
+	var teclas = {"ui_up": KEY_W, "ui_down": KEY_S, "ui_left": KEY_A, "ui_right": KEY_D}
+	for accion in teclas:
+		var evento = InputEventKey.new()
+		evento.physical_keycode = teclas[accion]
+		if not InputMap.action_has_event(accion, evento):
+			InputMap.action_add_event(accion, evento)
 
 
 # ==========================================
@@ -449,20 +517,32 @@ func crear_boton_en(padre: Node, texto: String, ancho: int, alto: int, fuente: i
 
 
 # MODS: lista con foto (letras), descripción y botón INSTALAR / USAR / ACTIVO
-func _on_mods_pulsado(logro_nuevo = false):
+func _on_mods_pulsado(logro_nuevo = false, pagina = 0):
+	pagina_mods = pagina
 	limpiar_menu()
-	menu_caja.add_theme_constant_override("separation", 6)  # 5 mods: menos espacio para que quepan
-	crear_etiqueta_menu("MODS", 52, Color(0, 0.6, 1))
+	menu_caja.add_theme_constant_override("separation", 6)
+	crear_etiqueta_menu("MODS  %d/2" % (pagina_mods + 1), 52, Color(0, 0.6, 1))
 
-	for mod in lista_mods:
-		crear_fila_mod(mod)
+	var inicio = pagina_mods * 5
+	var fin = mini(inicio + 5, lista_mods.size())
+	for i in range(inicio, fin):
+		crear_fila_mod(lista_mods[i])
 
 	if logro_nuevo:
 		crear_etiqueta_menu("ACHIEVEMENT UNLOCKED: Modder", 26, Color(1, 0.84, 0))
 
-	var volver = crear_boton_menu("VOLVER")
-	volver.custom_minimum_size = Vector2(240, 60)
+	var fila_paginas = HBoxContainer.new()
+	fila_paginas.alignment = BoxContainer.ALIGNMENT_CENTER
+	fila_paginas.add_theme_constant_override("separation", 20)
+	menu_caja.add_child(fila_paginas)
+	if pagina_mods > 0:
+		var anterior = crear_boton_flecha(fila_paginas, false)
+		anterior.pressed.connect(_on_mods_pulsado.bind(false, pagina_mods - 1))
+	var volver = crear_boton_en(fila_paginas, "VOLVER", 240, 60, 30)
 	volver.pressed.connect(_volver_de_mods)
+	if pagina_mods < 1:
+		var siguiente = crear_boton_flecha(fila_paginas, true)
+		siguiente.pressed.connect(_on_mods_pulsado.bind(false, pagina_mods + 1))
 	volver.grab_focus.call_deferred()
 
 
@@ -529,13 +609,13 @@ func _instalar_mod(id: String):
 	var primera_vez = not logro_modder
 	logro_modder = true
 	guardar_logros()
-	_on_mods_pulsado(primera_vez)
+	_on_mods_pulsado(primera_vez, pagina_mods)
 
 
 func _usar_mod(id: String):
 	mod_activo = id
 	guardar_logros()
-	_on_mods_pulsado()
+	_on_mods_pulsado(false, pagina_mods)
 
 
 # Colores y caras de los bloques según el mod activo (null = juego base)
@@ -553,6 +633,11 @@ func obtener_skin(rojo: bool):
 			if rojo:
 				return {"color": Color(0.5, 0.8, 0.5), "cara": ""}  # verde claro suave
 			return {"color": Color(0.1, 0.4, 0.15), "cara": ""}  # verde oscuro
+		"ils":
+			# ILS reutiliza el modelo habitual de slime: verde en bloques blancos y rojo en bloques rojos.
+			if rojo:
+				return {"color": Color(0.9, 0.05, 0.05), "cara": ""}
+			return {"color": Color(0.25, 0.85, 0.3), "cara": ""}
 		"ilb":
 			if rojo:
 				return {"color": Color(0.2, 0.5, 0.75), "cara": ""}  # celeste oscuro
@@ -568,7 +653,11 @@ func poner_skin(bloque: Node, skin: Dictionary):
 	cubierta.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bloque.add_child(cubierta)
 
-	if skin["cara"] != "":
+	if mod_activo == "ils":
+		# Usa el mismo modelo visual de los slimes normales/enemigos, sin inventar otra textura.
+		cubierta.color = Color(0, 0, 0, 0)
+		agregar_modelo_slime(cubierta, Vector2(tamaño_bloque, tamaño_bloque), skin["color"])
+	elif skin["cara"] != "":
 		var cara = Label.new()
 		cara.text = skin["cara"]
 		cara.add_theme_font_size_override("font_size", 26)
@@ -595,7 +684,8 @@ func _on_logros_pulsado(pagina = 0):
 	else:
 		# Página 2: logros que todavía no existen en esta versión (siguen sin descubrir)
 		mostrar_logro(logro_door, "Door", "Click the door in the menu")
-		for i in range(3):
+		mostrar_logro(logro_slimekiller, "Slime killer", "Kill the big slime in level 40")
+		for i in range(2):
 			mostrar_logro(false, "", "")
 
 	# Fila inferior: [flecha izquierda]  VOLVER  [flecha derecha]
@@ -774,6 +864,10 @@ func _physics_process(delta):
 	if nivel_actual >= nivel_slime:
 		procesar_slime(delta)
 
+	# Niveles 36 a 40: pistola, dash y jefe
+	if nivel_actual >= nivel_armas:
+		procesar_armas(delta)
+
 	# Niveles 21 a 25: durante unos segundos se ve todo el mapa para memorizarlo
 	if tiempo_revelado > 0:
 		tiempo_revelado -= delta
@@ -801,7 +895,8 @@ func _physics_process(delta):
 
 	# Solo desde el nivel 11: revisamos si el jugador toca un bloque rojo
 	# (mientras sales disparado por un slime vuelas por encima y no recibes daño)
-	if nivel_actual < nivel_corazones or jugador == null or tiempo_invulnerable > 0 or reiniciando or debug_activo or impulsando:
+	# (durante el dash también eres invencible)
+	if nivel_actual < nivel_corazones or jugador == null or tiempo_invulnerable > 0 or reiniciando or debug_activo or impulsando or dash_activo > 0:
 		return
 	for rojo in get_tree().get_nodes_in_group("rojos"):
 		if rojo.is_queued_for_deletion():
@@ -823,7 +918,9 @@ func recibir_dano():
 		# Sin corazones: vuelves al nivel 11 (o al 21 si estabas en los niveles de memoria)
 		# con corazones nuevos y un mapa nuevo.
 		# "reiniciando" bloquea el daño hasta que el jugador reaparezca.
-		if nivel_actual >= nivel_slime:
+		if nivel_actual >= nivel_armas:
+			nivel_actual = nivel_armas
+		elif nivel_actual >= nivel_slime:
 			nivel_actual = nivel_slime
 		elif nivel_actual >= nivel_memoria:
 			nivel_actual = nivel_memoria
@@ -914,6 +1011,7 @@ func generar_mapa_procedural():
 	for flecha in get_tree().get_nodes_in_group("flechas"):
 		flecha.queue_free()
 	reiniciar_slime()
+	reiniciar_armas()
 	hay_secreto = false
 
 	# Nuevo nivel / reaparición: sin invencibilidad pendiente y daño activado de nuevo
@@ -937,7 +1035,7 @@ func generar_mapa_procedural():
 		dano_en_rojos = false
 
 	# Al entrar a los niveles de memoria (21) y de slime (26) los corazones se reinician
-	if nivel_actual == nivel_memoria or nivel_actual == nivel_slime:
+	if nivel_actual == nivel_memoria or nivel_actual == nivel_slime or nivel_actual == nivel_armas:
 		corazones = corazones_max
 		actualizar_corazones()
 
@@ -955,8 +1053,19 @@ func generar_mapa_procedural():
 
 	# NIVELES 26 A 35: mapa especial con slimes y bloques fantasma
 	texto_tutorial.visible = false
-	if nivel_actual >= nivel_slime:
+	puerta.visible = true
+	tutorial_dash_activo = false
+	# (los niveles 36 a 39 usan el generador normal de bloques rojos; el 40 es el jefe)
+	if nivel_actual >= nivel_slime and nivel_actual < nivel_armas:
 		generar_nivel_slime()
+		terminar_generacion()
+		return
+	if nivel_actual == 39:
+		generar_nivel_dash()
+		terminar_generacion()
+		return
+	if nivel_actual == nivel_jefe:
+		generar_nivel_jefe()
 		terminar_generacion()
 		return
 
@@ -1110,6 +1219,10 @@ func generar_mapa_procedural():
 			elif mapa_virtual[x][y] == 4:
 				crear_bloque_negro(x, y)
 
+	# Niveles 36 a 39: slimes pequeños sobre el camino
+	if nivel_actual >= nivel_armas:
+		crear_enemigos_slime(camino_orden)
+
 	terminar_generacion()
 
 
@@ -1125,6 +1238,17 @@ func terminar_generacion():
 	actualizar_velocidad()
 	if debug_activo:
 		aplicar_debug()  # las paredes del nivel nuevo también se atraviesan
+
+	# Pistola desde el nivel 36 y dash desde el 38
+	tiene_arma = nivel_actual >= nivel_armas
+	tiene_dash = nivel_actual >= nivel_dash
+	actualizar_arma_visual()
+	actualizar_botones_accion()
+	var es_tel = dispositivo_actual == "telefono"
+	if nivel_actual == nivel_armas:
+		mostrar_mensaje.call_deferred("GUN!  " + ("F" if es_tel else "CLICK") + " = shoot", Color(1, 0.84, 0), 330)
+	elif nivel_actual == nivel_dash:
+		mostrar_mensaje.call_deferred("DASH!  " + ("D" if es_tel else "SHIFT") + " = dash", Color(0.5, 0.9, 1), 330)
 
 
 # ==========================================
@@ -1230,6 +1354,37 @@ func generar_nivel_slime():
 		texto_tutorial.visible = true
 
 
+func agregar_modelo_slime(padre: Node, tam: Vector2, color_cuerpo: Color):
+	# Modelo reutilizado para slimes normales, bloques del mod y proyectiles ILS.
+	var cuerpo = ColorRect.new()
+	cuerpo.size = tam
+	cuerpo.color = color_cuerpo
+	cuerpo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	padre.add_child(cuerpo)
+
+	var brillo = ColorRect.new()
+	brillo.size = Vector2(maxf(4.0, tam.x - tam.x * 0.28), maxf(2.0, tam.y * 0.14))
+	brillo.position = Vector2(tam.x * 0.14, tam.y * 0.12)
+	brillo.color = Color(1, 1, 1, 0.3)
+	brillo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	padre.add_child(brillo)
+
+	# Ojos escalados al tamaño del modelo para que también se reconozca en miniatura.
+	for factor_x in [0.30, 0.64]:
+		var ojo = ColorRect.new()
+		ojo.size = Vector2(maxf(2.0, tam.x * 0.14), maxf(2.0, tam.y * 0.18))
+		ojo.position = Vector2(tam.x * factor_x, tam.y * 0.48)
+		ojo.color = Color(1, 1, 1)
+		ojo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		padre.add_child(ojo)
+		var pupila = ColorRect.new()
+		pupila.size = Vector2(maxf(1.0, tam.x * 0.06), maxf(1.0, tam.y * 0.08))
+		pupila.position = ojo.position + Vector2(ojo.size.x * 0.35, ojo.size.y * 0.35)
+		pupila.color = Color(0, 0, 0)
+		pupila.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		padre.add_child(pupila)
+
+
 func color_slime() -> Color:
 	# Cada texture pack tiene su color de slime para combinar
 	match mod_activo:
@@ -1239,6 +1394,8 @@ func color_slime() -> Color:
 			return Color(0.65, 0.85, 0.35)  # verde lima
 		"ilg":
 			return Color(0.2, 0.75, 0.75)   # turquesa
+		"ils":
+			return Color(0.12, 0.72, 0.18)    # verde slime brillante
 		"ilb":
 			return Color(0.7, 0.45, 1.0)    # violeta
 	return Color(0.25, 0.85, 0.3)           # verde slime
@@ -1325,6 +1482,630 @@ func crear_flecha_tutorial(pos: Vector2, hacia_derecha: bool):
 	var tween = flecha.create_tween().set_loops()
 	tween.tween_property(flecha, "modulate:a", 0.15, 0.45)
 	tween.tween_property(flecha, "modulate:a", 1.0, 0.45)
+
+
+# ==========================================
+# NIVELES 36 A 40: PISTOLA, DASH Y EL SLIME GIGANTE
+# ==========================================
+# Colores según el texture pack: el fuego es el color de los bloques rojos del pack
+func color_fuego() -> Color:
+	match mod_activo:
+		"ilp":
+			return Color(0.6, 0.2, 0.85)
+		"ily":
+			return Color(1, 0.55, 0.05)
+		"ilg":
+			return Color(0.5, 0.8, 0.5)
+		"ilb":
+			return Color(0.2, 0.5, 0.75)
+		"ils":
+			return Color(0.9, 0.06, 0.08) # disparos rojos para ILS
+	return Color(0.9, 0.05, 0.05)
+
+
+# La pistola es negra en el juego base y toma un tono oscuro del color del pack
+func color_arma() -> Color:
+	var skin = obtener_skin(false)
+	# Sin pack (juego base) la pistola es negra
+	if typeof(skin) != TYPE_DICTIONARY or not skin.has("color"):
+		return Color(0.04, 0.04, 0.04)
+	var color_base: Color = skin
+	return color_base.darkened(0.55)
+
+
+# Dibuja la pistola (cañón + empuñadura) pegada al personaje
+func crear_arma():
+	arma_nodo = Node2D.new()
+	arma_nodo.position = Vector2(0, 4)
+	arma_nodo.visible = false
+	jugador.add_child(arma_nodo)
+	construir_arma()
+
+
+# Cada texture pack tiene su propia pistola con otra forma y otros colores.
+# La pistola apunta hacia la derecha; el nodo entero gira hacia donde apuntas.
+func construir_arma():
+	for parte in arma_nodo.get_children():
+		arma_nodo.remove_child(parte)
+		parte.queue_free()
+
+	match mod_activo:
+		"ilp":
+			# Pistola rosa: cañón corto y gordito, punta morada y carita :3
+			parte_arma(12, -8, 24, 12, Color(1, 0.55, 0.75))
+			parte_arma(36, -8, 7, 12, Color(0.6, 0.2, 0.85))
+			parte_arma(15, 4, 10, 14, Color(0.6, 0.2, 0.85))
+			parte_arma(20, 4, 4, 4, Color(1, 0.8, 0.9))
+			var cara = Label.new()
+			cara.text = ":3"
+			cara.add_theme_font_size_override("font_size", 11)
+			cara.add_theme_color_override("font_color", Color(0.3, 0.05, 0.2))
+			cara.position = Vector2(15, -10)
+			arma_nodo.add_child(cara)
+		"ily":
+			# Pistola amarilla: cuerpo grueso con rayas y punta naranja
+			parte_arma(12, -8, 28, 12, Color(0.93, 0.85, 0.5))
+			parte_arma(18, -8, 4, 12, Color(1, 0.55, 0.05))
+			parte_arma(26, -8, 4, 12, Color(1, 0.55, 0.05))
+			parte_arma(40, -7, 5, 10, Color(1, 0.55, 0.05))
+			parte_arma(14, 4, 11, 14, Color(1, 0.55, 0.05))
+		"ilg":
+			# Pistola verde: cañón largo y fino con mira y cargador claro
+			parte_arma(12, -5, 32, 7, Color(0.1, 0.4, 0.15))
+			parte_arma(44, -6, 5, 9, Color(0.5, 0.8, 0.5))
+			parte_arma(38, -9, 4, 4, Color(0.5, 0.8, 0.5))
+			parte_arma(13, 2, 8, 16, Color(0.1, 0.4, 0.15))
+			parte_arma(22, 2, 6, 10, Color(0.5, 0.8, 0.5))
+		"ilb":
+			# Pistola azul futurista: cuerpo oscuro con franja celeste brillante
+			parte_arma(12, -7, 30, 10, Color(0.02, 0.04, 0.18))
+			parte_arma(16, -4, 22, 3, Color(0.2, 0.5, 0.75))
+			parte_arma(42, -6, 6, 8, Color(0.2, 0.5, 0.75))
+			parte_arma(14, 3, 9, 14, Color(0.02, 0.04, 0.18))
+			parte_arma(14, 16, 9, 3, Color(0.2, 0.5, 0.75))
+		"ils":
+			# Pistola I LOVE SLIME: cuerpo verde, núcleo brillante, cañón lima y cargador orgánico.
+			parte_arma(12, -8, 30, 12, Color(0.12, 0.48, 0.12))
+			parte_arma(17, -5, 19, 4, Color(0.2, 1.0, 0.15))
+			parte_arma(40, -7, 8, 10, Color(0.55, 1.0, 0.1))
+			parte_arma(15, 4, 10, 14, Color(0.12, 0.48, 0.12))
+			parte_arma(17, 7, 6, 5, Color(0.55, 1.0, 0.1))
+		_:
+			# Pistola básica negra
+			parte_arma(14, -6, 24, 9, Color(0.04, 0.04, 0.04))
+			parte_arma(15, 2, 9, 15, Color(0.04, 0.04, 0.04))
+			parte_arma(36, -8, 3, 3, Color(0.3, 0.3, 0.3))
+
+
+# Una pieza rectangular de la pistola
+func parte_arma(x: float, y: float, ancho: float, alto: float, color: Color):
+	var pieza = ColorRect.new()
+	pieza.position = Vector2(x, y)
+	pieza.size = Vector2(ancho, alto)
+	pieza.color = color
+	pieza.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	arma_nodo.add_child(pieza)
+
+
+func actualizar_arma_visual():
+	if arma_nodo == null:
+		return
+	arma_nodo.visible = tiene_arma
+	construir_arma()  # por si cambiaste de texture pack desde el menú
+
+
+# Botones D (dash) y F (disparo) para teléfonos
+func crear_botones_accion():
+	# F en la esquina de abajo a la izquierda y D justo a su lado
+	boton_fuego = crear_boton_accion("F", Vector2(55, 585), _fuego_pulsado, _fuego_soltado)
+	boton_dash = crear_boton_accion("D", Vector2(145, 585), intentar_dash, _sin_accion)
+
+
+func _fuego_pulsado():
+	fuego_tactil = true
+
+
+func _fuego_soltado():
+	fuego_tactil = false
+
+
+func _sin_accion():
+	pass
+
+
+func crear_boton_accion(texto: String, pos: Vector2, al_pulsar: Callable, al_soltar: Callable) -> TouchScreenButton:
+	var lado = 70
+	var boton = TouchScreenButton.new()
+	boton.position = pos
+	boton.visible = false
+	var forma = RectangleShape2D.new()
+	forma.size = Vector2(lado, lado)
+	boton.shape = forma
+
+	var fondo = ColorRect.new()
+	fondo.size = Vector2(lado, lado)
+	fondo.position = Vector2(-lado / 2, -lado / 2)
+	fondo.color = Color(0, 0, 0, 0.9)
+	fondo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	boton.add_child(fondo)
+
+	var etiqueta = Label.new()
+	etiqueta.text = texto
+	etiqueta.add_theme_font_size_override("font_size", 40)
+	etiqueta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	etiqueta.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	etiqueta.size = Vector2(lado, lado)
+	etiqueta.position = Vector2(-lado / 2, -lado / 2)
+	etiqueta.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	boton.add_child(etiqueta)
+
+	boton.pressed.connect(func():
+		fondo.color = Color(0.3, 0.3, 0.3, 0.95)
+		al_pulsar.call()
+	)
+	boton.released.connect(func():
+		fondo.color = Color(0, 0, 0, 0.9)
+		al_soltar.call()
+	)
+	capa_interfaz.add_child(boton)
+	return boton
+
+
+func actualizar_botones_accion():
+	var es_tel = dispositivo_actual == "telefono"
+	if boton_fuego:
+		boton_fuego.visible = es_tel and tiene_arma
+	if boton_dash:
+		boton_dash.visible = es_tel and tiene_dash
+	if not tiene_arma:
+		fuego_tactil = false
+
+
+# Dirección que se está pulsando (las flechas opuestas se cancelan)
+func direccion_pulsada() -> Vector2:
+	var d = Vector2.ZERO
+	if Input.is_action_pressed("ui_right"):
+		d.x += 1
+	if Input.is_action_pressed("ui_left"):
+		d.x -= 1
+	if Input.is_action_pressed("ui_down"):
+		d.y += 1
+	if Input.is_action_pressed("ui_up"):
+		d.y -= 1
+	return d
+
+
+func reiniciar_armas():
+	for grupo in ["balas", "fuego_boss", "boss", "enemigos", "balas_tutorial"]:
+		for nodo in get_tree().get_nodes_in_group(grupo):
+			nodo.queue_free()
+	jefe = null
+	jefe_vivo = false
+	dash_activo = 0.0
+	dash_cd = 0.0
+	fuego_cd = 0.0
+	if jefe_barra:
+		jefe_barra_fondo.visible = false
+		jefe_barra.visible = false
+		jefe_nombre.visible = false
+	if sprite_jugador:
+		sprite_jugador.scale = Vector2(0.4, 0.4)
+
+
+func procesar_armas(delta):
+	if jugador == null:
+		return
+	fuego_cd -= delta
+	dash_cd -= delta
+
+	# Dash: mientras dura dejas una estela y no recibes daño
+	if dash_activo > 0.0:
+		dash_activo -= delta
+		crear_estela()
+
+	# Hacia dónde mira el personaje (la pistola gira con él).
+	# En un computador apuntas con el mouse; en teléfono mira hacia donde caminas.
+	var es_pc_real = OS.has_feature("pc")
+	var d = direccion_pulsada()
+	if es_pc_real and tiene_arma:
+		var haz = get_global_mouse_position() - jugador.position
+		if haz.length() > 4.0:
+			mirando = haz.normalized()
+	elif d != Vector2.ZERO:
+		mirando = d.normalized()
+	if arma_nodo:
+		arma_nodo.rotation = mirando.angle()
+		arma_nodo.scale.y = -1.0 if mirando.x < 0 else 1.0
+
+	# Disparo: click izquierdo en PC, botón F en teléfono
+	var click = es_pc_real and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	if tiene_arma and not reiniciando and (click or fuego_tactil):
+		disparar()
+
+	# Nivel 39: tutorial vacío para aprender a esquivar con dash
+	if nivel_actual == 39:
+		procesar_tutorial_dash(delta)
+	elif nivel_actual < nivel_jefe:
+		procesar_enemigos(delta)
+
+	if nivel_actual == nivel_jefe:
+		procesar_jefe(delta)
+
+
+# ---------- Slimes pequeños (niveles 36 a 39) ----------
+func crear_enemigos_slime(camino_orden: Array):
+	var cantidad = nivel_actual - nivel_armas + 2  # 36 -> 2 ... 39 -> 5
+	var indices = range(6, camino_orden.size() - 4)
+	indices.shuffle()
+	var usados = []
+	for i in indices:
+		if usados.size() >= cantidad:
+			break
+		var lejos = true
+		for u in usados:
+			if absi(u - i) < 4:
+				lejos = false
+		if lejos:
+			usados.append(i)
+			crear_enemigo_slime(camino_orden[i])
+
+
+func crear_enemigo_slime(celda: Vector2i):
+	var enemigo = Area2D.new()
+	enemigo.add_to_group("enemigos")
+	enemigo.position = Vector2((celda.x + 0.5) * tamaño_bloque, (celda.y + 0.5) * tamaño_bloque)
+	enemigo.set_meta("vida", 3)
+	enemigo.set_meta("cd", randf_range(1.0, 3.0))  # cada uno empieza a distinto tiempo
+
+	var cuerpo = ColorRect.new()
+	cuerpo.size = Vector2(44, 44)
+	cuerpo.position = Vector2(-22, -22)
+	cuerpo.color = Color(0.9, 0.05, 0.05)  # Los slimes enemigos siempre son rojos en todos los mods y en el juego base.
+	enemigo.add_child(cuerpo)
+	var brillo = ColorRect.new()
+	brillo.size = Vector2(34, 6)
+	brillo.position = Vector2(-17, -18)
+	brillo.color = Color(1, 1, 1, 0.3)
+	enemigo.add_child(brillo)
+	for ojo_x in [-13, 4]:
+		var ojo = ColorRect.new()
+		ojo.size = Vector2(9, 11)
+		ojo.position = Vector2(ojo_x, -8)
+		ojo.color = Color(1, 1, 1)
+		enemigo.add_child(ojo)
+		var pupila = ColorRect.new()
+		pupila.size = Vector2(4, 5)
+		pupila.position = Vector2(ojo_x + 1, -4)
+		pupila.color = Color(0, 0, 0)
+		enemigo.add_child(pupila)
+
+	var colision = CollisionShape2D.new()
+	var forma = RectangleShape2D.new()
+	forma.size = Vector2(44, 44)
+	colision.shape = forma
+	enemigo.add_child(colision)
+	add_child(enemigo)
+
+
+# Cada slime pequeño tira 1 bloque de fuego hacia ti cada 3 segundos
+func procesar_enemigos(delta):
+	if jugador == null or reiniciando:
+		return
+	for enemigo in get_tree().get_nodes_in_group("enemigos"):
+		if enemigo.is_queued_for_deletion():
+			continue
+		var espera = float(enemigo.get_meta("cd")) - delta
+		if espera <= 0.0:
+			espera = 3.0
+			var dir = (jugador.position - enemigo.position).normalized()
+			var fuego = crear_proyectil(enemigo.position, dir * 260.0, 24, color_fuego(), "fuego_boss")
+			fuego.body_entered.connect(_on_fuego_jefe_cuerpo.bind(fuego))
+		enemigo.set_meta("cd", espera)
+
+
+func danar_enemigo(enemigo: Node):
+	var vida = int(enemigo.get_meta("vida")) - 1
+	enemigo.set_meta("vida", vida)
+	if vida <= 0:
+		enemigo.remove_from_group("enemigos")
+		enemigo.queue_free()
+	else:
+		enemigo.modulate = Color(1.6, 0.8, 0.8)
+		var tween = enemigo.create_tween()
+		tween.tween_property(enemigo, "modulate", Color(1, 1, 1), 0.12)
+
+
+# Script sencillo para los proyectiles: avanzan en línea recta y se borran al salir de la pantalla
+func obtener_script_proyectil() -> GDScript:
+	if script_proyectil == null:
+		script_proyectil = GDScript.new()
+		script_proyectil.source_code = """
+extends Area2D
+
+var vel = Vector2.ZERO
+
+func _physics_process(delta):
+	position += vel * delta
+	if position.x < -60 or position.x > 1220 or position.y < -60 or position.y > 700:
+		queue_free()
+"""
+		script_proyectil.reload()
+	return script_proyectil
+
+
+func crear_proyectil(pos: Vector2, vel: Vector2, lado: int, color: Color, grupo: String) -> Area2D:
+	var area = Area2D.new()
+	area.set_script(obtener_script_proyectil())
+	area.add_to_group(grupo)
+	area.position = pos
+	area.set("vel", vel)
+
+	if mod_activo == "ils":
+		# Los disparos usan el modelo de slime ya existente, en rojo; no un cuadrado ni otra textura.
+		var grafico_slime = Node2D.new()
+		grafico_slime.position = Vector2(-lado / 2, -lado / 2)
+		area.add_child(grafico_slime)
+		agregar_modelo_slime(grafico_slime, Vector2(maxf(lado, 22.0), maxf(lado, 22.0)), Color(0.9, 0.05, 0.05))
+	else:
+		var grafico = ColorRect.new()
+		grafico.size = Vector2(lado, lado)
+		grafico.position = Vector2(-lado / 2, -lado / 2)
+		grafico.color = color
+		area.add_child(grafico)
+
+	var colision = CollisionShape2D.new()
+	var forma = RectangleShape2D.new()
+	forma.size = Vector2(lado, lado)
+	colision.shape = forma
+	area.add_child(colision)
+	add_child(area)
+	return area
+
+
+# Disparo del jugador: una bolita de fuego del color del pack
+func disparar():
+	if fuego_cd > 0.0:
+		return
+	fuego_cd = 0.25
+	var bala = crear_proyectil(jugador.position + mirando * 36, mirando * 700.0, 14, color_fuego().lightened(0.3), "balas")
+	bala.body_entered.connect(_on_bala_cuerpo.bind(bala))
+	bala.area_entered.connect(_on_bala_area.bind(bala))
+
+
+func _on_bala_cuerpo(body, bala):
+	if body == jugador or not is_instance_valid(bala):
+		return
+	if body is StaticBody2D:
+		bala.queue_free()  # choca con una pared
+
+
+func _on_bala_area(area, bala):
+	if not is_instance_valid(bala) or bala.is_queued_for_deletion():
+		return
+	if area.is_in_group("boss"):
+		danar_jefe(1)
+		bala.queue_free()
+	elif area.is_in_group("enemigos"):
+		danar_enemigo(area)
+		bala.queue_free()
+	elif area.is_in_group("fuego_boss"):
+		area.queue_free()  # tu disparo apaga el fuego del jefe
+		bala.queue_free()
+	elif area.is_in_group("rojos"):
+		area.queue_free()  # los bloques rojos se destruyen con disparos
+		bala.queue_free()
+
+
+# ---------- Dash ----------
+func intentar_dash():
+	if not tiene_dash or dash_cd > 0.0 or impulsando or jugador == null or reiniciando or get_tree().paused:
+		return
+	var d = direccion_pulsada()
+	if d == Vector2.ZERO:
+		d = mirando
+	d = d.normalized()
+	dash_cd = 0.8
+	dash_activo = 0.25
+	jugador.set("impulso", d * 1000.0)
+	jugador.set("tiempo_impulso", 0.14)
+
+	# Pequeña animación: el personaje se estira en la dirección del dash y vuelve a la normalidad
+	if sprite_jugador:
+		var base = Vector2(0.4, 0.4)
+		if absf(d.x) >= absf(d.y):
+			sprite_jugador.scale = base * Vector2(1.5, 0.7)
+		else:
+			sprite_jugador.scale = base * Vector2(0.7, 1.5)
+		var tween = sprite_jugador.create_tween()
+		tween.tween_property(sprite_jugador, "scale", base, 0.22)
+
+
+# Cuadro azul que se desvanece detrás del personaje mientras hace dash
+func crear_estela():
+	var estela = ColorRect.new()
+	estela.size = Vector2(50, 50)
+	estela.position = jugador.position - Vector2(25, 25)
+	estela.color = Color(0.6, 0.85, 1, 0.55)
+	estela.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(estela)
+	var tween = estela.create_tween()
+	tween.tween_property(estela, "modulate:a", 0.0, 0.25)
+	tween.tween_callback(estela.queue_free)
+
+
+# ---------- Slime gigante (nivel 40) ----------
+func generar_nivel_dash():
+	# Campo vacío: solo el jugador, las balas y la puerta bloqueada por el tutorial.
+	tutorial_dash_tiempo = 0.0
+	tutorial_dash_esquivadas = 0
+	tutorial_dash_activo = true
+	puerta.visible = false
+	puerta.position = Vector2((columnas - 1) * tamaño_bloque, 5 * tamaño_bloque)
+	texto_tutorial.visible = true
+	texto_tutorial.text = "DASH para esquivar balas: esquivadas 0/5"
+	texto_tutorial.position = Vector2(230, 80)
+
+
+func procesar_tutorial_dash(delta):
+	if not tutorial_dash_activo or jugador == null or reiniciando:
+		return
+	tutorial_dash_tiempo += delta
+	if tutorial_dash_tiempo >= 5.0:
+		tutorial_dash_tiempo = 0.0
+		var origen = Vector2(columnas * tamaño_bloque + 20, randf_range(100, 540))
+		var bala = crear_proyectil(origen, Vector2(-320.0, 0), 28, color_slime(), "balas_tutorial")
+		bala.body_entered.connect(_on_bala_tutorial_cuerpo.bind(bala))
+
+
+func _on_bala_tutorial_cuerpo(body, bala):
+	if body != jugador or not is_instance_valid(bala) or bala.is_queued_for_deletion():
+		return
+	if dash_activo > 0.0:
+		tutorial_dash_esquivadas += 1
+		mostrar_mensaje("¡ESQUIVADA! %d/5" % tutorial_dash_esquivadas, Color(0.5, 0.9, 1), 400)
+		if tutorial_dash_esquivadas >= 5:
+			tutorial_dash_activo = false
+			puerta.visible = true
+			texto_tutorial.text = "¡Tutorial completado! Ve a la puerta."
+	else:
+		mostrar_mensaje("¡USA DASH PARA ESQUIVAR!", Color(1, 0.3, 0.3), 330)
+	bala.queue_free()
+
+
+func generar_nivel_jefe():
+	# Pilares para taparse de los disparos
+	for celda in [Vector2i(5, 2), Vector2i(5, 3), Vector2i(5, 6), Vector2i(5, 7), Vector2i(8, 4), Vector2i(8, 5)]:
+		colocar_pared(celda.x, celda.y)
+	crear_jefe()
+
+
+func crear_jefe():
+	jefe = Area2D.new()
+	jefe.add_to_group("boss")
+	jefe.add_to_group("rojos")  # tocarlo quita un corazón
+	jefe.position = Vector2(928, 320)
+	jefe_vivo = true
+	jefe_vida = jefe_vida_max
+	jefe_tiempo = 0.0
+	jefe_cd = 2.0
+
+	var cuerpo = ColorRect.new()
+	cuerpo.size = Vector2(200, 240)
+	cuerpo.position = Vector2(-100, -120)
+	cuerpo.color = color_slime()
+	jefe.add_child(cuerpo)
+
+	var brillo = ColorRect.new()
+	brillo.size = Vector2(170, 22)
+	brillo.position = Vector2(-85, -108)
+	brillo.color = Color(1, 1, 1, 0.3)
+	jefe.add_child(brillo)
+
+	for ojo_x in [-60, 20]:
+		var ojo = ColorRect.new()
+		ojo.size = Vector2(40, 50)
+		ojo.position = Vector2(ojo_x, -50)
+		ojo.color = Color(1, 1, 1)
+		jefe.add_child(ojo)
+		var pupila = ColorRect.new()
+		pupila.size = Vector2(18, 24)
+		pupila.position = Vector2(ojo_x + 4, -38)  # mira hacia la izquierda, donde estás tú
+		pupila.color = Color(0, 0, 0)
+		jefe.add_child(pupila)
+
+	var boca = ColorRect.new()
+	boca.size = Vector2(100, 14)
+	boca.position = Vector2(-70, 40)
+	boca.color = Color(0, 0, 0, 0.7)
+	jefe.add_child(boca)
+
+	var colision = CollisionShape2D.new()
+	var forma = RectangleShape2D.new()
+	forma.size = Vector2(200, 240)
+	colision.shape = forma
+	jefe.add_child(colision)
+	add_child(jefe)
+
+	jefe_barra.color = color_slime()
+	jefe_barra.size.x = 494
+	jefe_barra_fondo.visible = true
+	jefe_barra.visible = true
+	jefe_nombre.visible = true
+
+
+func procesar_jefe(delta):
+	if not jefe_vivo or jefe == null or not is_instance_valid(jefe):
+		return
+	# Se mueve de arriba a abajo
+	jefe_tiempo += delta
+	jefe.position.y = 320 + sin(jefe_tiempo * 0.9) * 165
+
+	# Lanza bloques de fuego hacia ti (3 a la vez cuando le queda la mitad de vida)
+	jefe_cd -= delta
+	if jefe_cd <= 0.0 and jugador != null and not reiniciando:
+		var furioso = jefe_vida <= jefe_vida_max / 2
+		jefe_cd = 1.0 if furioso else 1.7
+		lanzar_fuego_jefe(furioso)
+
+
+func lanzar_fuego_jefe(furioso: bool):
+	var origen = jefe.position + Vector2(-110, 0)
+	var dir = (jugador.position - origen).normalized()
+	var angulos = [-0.3, 0.0, 0.3] if furioso else [0.0]
+	for a in angulos:
+		var fuego = crear_proyectil(origen, dir.rotated(a) * 320.0, 30, color_fuego(), "fuego_boss")
+		fuego.body_entered.connect(_on_fuego_jefe_cuerpo.bind(fuego))
+
+
+func _on_fuego_jefe_cuerpo(body, fuego):
+	if not is_instance_valid(fuego) or fuego.is_queued_for_deletion():
+		return
+	if body == jugador:
+		# Si estás invencible (o haces dash) el fuego te atraviesa
+		if debug_activo or tiempo_invulnerable > 0 or reiniciando or dash_activo > 0 or frames_gracia > 0:
+			return
+		recibir_dano()
+		fuego.queue_free()
+	elif body is StaticBody2D:
+		fuego.queue_free()  # choca con una pared
+
+
+func danar_jefe(cantidad: int):
+	if not jefe_vivo or jefe == null or not is_instance_valid(jefe):
+		return
+	jefe_vida -= cantidad
+	jefe_barra.size.x = 494.0 * maxf(jefe_vida, 0) / jefe_vida_max
+	# Destello al recibir un disparo
+	jefe.modulate = Color(1.6, 0.8, 0.8)
+	var tween = jefe.create_tween()
+	tween.tween_property(jefe, "modulate", Color(1, 1, 1), 0.12)
+	if jefe_vida <= 0:
+		matar_jefe()
+
+
+func matar_jefe():
+	jefe_vivo = false
+	jefe.remove_from_group("boss")
+	jefe.remove_from_group("rojos")  # ya no hace daño
+	for fuego in get_tree().get_nodes_in_group("fuego_boss"):
+		fuego.queue_free()
+	# La puerta aparece exactamente donde murió el jefe.
+	puerta.position = jefe.position
+	puerta.visible = true
+	var tween = jefe.create_tween()
+	tween.tween_property(jefe, "modulate:a", 0.0, 0.6)
+	tween.tween_callback(jefe.queue_free)
+	jefe_barra_fondo.visible = false
+	jefe_barra.visible = false
+	jefe_nombre.visible = false
+
+	# Logro "Slime killer" (solo la primera vez)
+	if not logro_slimekiller:
+		logro_slimekiller = true
+		guardar_logros()
+		mostrar_mensaje("ACHIEVEMENT: Slime killer", Color(1, 0.84, 0), 250)
+	else:
+		mostrar_mensaje("BIG SLIME DEFEATED!", Color(1, 0.84, 0), 280)
 
 
 # ---------- Lógica del slime ----------
@@ -1490,6 +2271,11 @@ func colocar_pared(x, y, traspasable = false):
 # Doble pulsación de flecha arriba (en menos de 0.5 s) en el nivel 10:
 # el bloque traspasable empieza a brillar
 func _input(event):
+	# Shift (PC): dash hacia la dirección que estás pulsando
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SHIFT:
+		intentar_dash()
+		return
+
 	# Esc: abre el menú de pausa (en PC)
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		abrir_pausa()
@@ -2009,6 +2795,14 @@ func _on_puerta_tocada(body):
 		if nivel_actual >= nivel_oscuridad and nivel_actual < nivel_slime and not tiene_linterna:
 			mostrar_mensaje("NECESITAS LA LINTERNA", Color(1, 0.3, 0.3), 330)
 			return
+		# En el nivel 39 la puerta no funciona hasta esquivar cinco balas con dash.
+		if nivel_actual == 39 and tutorial_dash_esquivadas < 5:
+			mostrar_mensaje("ESQUIVA 5 BALAS CON DASH: %d/5" % tutorial_dash_esquivadas, Color(1, 0.3, 0.3), 260)
+			return
+		# El slime gigante cierra la puerta mientras siga vivo
+		if nivel_actual == nivel_jefe and jefe_vivo:
+			mostrar_mensaje("KILL THE BIG SLIME!", Color(1, 0.3, 0.3), 300)
+			return
 		# La puerta del último nivel termina la Alpha
 		if nivel_actual >= nivel_final:
 			terminar_alpha.call_deferred()
@@ -2040,6 +2834,7 @@ func cargar_logros():
 		logro_modder = archivo.get_value("logros", "modder", false)
 		logro_hitbox = archivo.get_value("logros", "hitbox", false)
 		logro_door = archivo.get_value("logros", "door", false)
+		logro_slimekiller = archivo.get_value("logros", "slimekiller", false)
 		nombre_bloqueado = archivo.get_value("perfil", "bloqueado", false)
 		nombre_usuario = str(archivo.get_value("perfil", "nombre", "")).left(10)
 		mods_instalados = archivo.get_value("mods", "instalados", ["base"])
@@ -2058,6 +2853,7 @@ func guardar_logros():
 	archivo.set_value("logros", "modder", logro_modder)
 	archivo.set_value("logros", "hitbox", logro_hitbox)
 	archivo.set_value("logros", "door", logro_door)
+	archivo.set_value("logros", "slimekiller", logro_slimekiller)
 	archivo.set_value("perfil", "bloqueado", nombre_bloqueado)
 	archivo.set_value("perfil", "nombre", nombre_usuario)
 	archivo.set_value("mods", "instalados", mods_instalados)
@@ -2186,10 +2982,12 @@ func crear_jugador_auxiliar():
 	luz_jugador.energy = 1.3
 	luz_jugador.enabled = false
 
+	sprite_jugador = sprite
 	jugador.add_child(sprite)
 	jugador.add_child(colision)
 	jugador.add_child(luz_jugador)
 	jugador.position = Vector2(96, 5 * 64 + 32)
+	crear_arma()  # la pistola (solo se ve desde el nivel 36)
 
 	var script_jugador = GDScript.new()
 	script_jugador.source_code = """
