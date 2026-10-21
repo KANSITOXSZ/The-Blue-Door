@@ -68,6 +68,10 @@ var logro_gold = false          # logro "Gold": conseguir el corazón dorado
 var logro_modder = false        # logro "Modder": instalar cualquier mod
 var logro_hitbox = false        # logro "Hitbox master": pasar los niveles 11 a 15 sin perder corazones rojos
 var dano_en_rojos = false       # true si perdiste un corazón rojo en los niveles 11 a 15
+var logro_hitbox2 = false       # logro "Hitbox master II": pasar los niveles 21 a 25 (oscuridad con fuego) sin perder corazones rojos
+var dano_en_rojos2 = false      # true si perdiste un corazón rojo en los niveles 21 a 25 (el daño al corazón dorado no cuenta)
+var tutorial_dash_completo = false  # true cuando ya esquivaste las 5 balas del nivel 39 (no se repite nunca más)
+var boton_z: TouchScreenButton  # botón "Z" arriba a la izquierda (abre la consola en teléfono, solo con el nombre IDK)
 var nombre_bloqueado = false    # true cuando confirmas el nombre con el check (ya no se puede cambiar)
 var boton_check: Button
 
@@ -102,6 +106,8 @@ var arma_nodo: Node2D            # dibujo de la pistola pegada al personaje
 var sprite_jugador: Sprite2D
 var fuego_cd = 0.0               # espera entre disparos
 var fuego_tactil = false         # botón F pulsado (teléfono)
+var aimbot_automatico = true     # true: en teléfono dispara solo al ver un objetivo; false: solo al pulsar F
+var rango_aimbot = 600.0         # distancia máxima del aimbot (píxeles)
 var dash_cd = 0.0                # espera entre dashes
 var dash_activo = 0.0            # segundos de invencibilidad que quedan del dash
 var boton_dash: TouchScreenButton
@@ -403,6 +409,7 @@ func _on_nombre_cambiado(nuevo: String):
 	nombre_usuario = nuevo.strip_edges().left(10)
 	guardar_logros()
 	actualizar_check()
+	actualizar_boton_z()
 
 
 # El check solo se ve si hay un nombre escrito y todavía no se confirmó
@@ -419,6 +426,7 @@ func _on_check_pulsado():
 	campo_nombre.release_focus()
 	guardar_logros()
 	actualizar_check()
+	actualizar_boton_z()
 
 
 # Pantalla principal: título y una fila con LOGROS (izquierda), JUGAR (centro) y MODS (derecha)
@@ -435,7 +443,7 @@ func mostrar_pantalla_principal():
 	menu_caja.add_child(puerta_deco)
 
 	crear_etiqueta_menu("THE BLUE DOOR", 72, Color(0, 0.6, 1))
-	crear_etiqueta_menu("ALPHA 2.0", 24, Color(0.6, 0.6, 0.6))
+	crear_etiqueta_menu("ALPHA 3.0", 24, Color(0.6, 0.6, 0.6))
 
 	var fila = HBoxContainer.new()
 	fila.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -680,7 +688,8 @@ func _on_logros_pulsado(pagina = 0):
 		mostrar_logro(logro_end, "¿End?", "Finish the Alpha")
 		mostrar_logro(logro_gold, "Gold", "Heart of gold!")
 		mostrar_logro(logro_modder, "Modder", "Download a mod")
-		mostrar_logro(logro_hitbox, "Hitbox master", "Clear levels 11-15 without taking damage")
+		# Hitbox master tiene una flecha: muestra su "raíz" de logros (Hitbox master II)
+		mostrar_logro(logro_hitbox, "Hitbox master", "Clear levels 11-15 without taking damage", _on_raiz_hitbox_pulsada)
 	else:
 		# Página 2: logros que todavía no existen en esta versión (siguen sin descubrir)
 		mostrar_logro(logro_door, "Door", "Click the door in the menu")
@@ -721,13 +730,61 @@ func crear_boton_flecha(padre: Node, hacia_derecha: bool) -> Button:
 	return boton
 
 
-# Un logro en la lista: si no se ha conseguido muestra "..."
-func mostrar_logro(conseguido: bool, nombre: String, descripcion: String):
-	if conseguido:
+# Un logro en la lista: si no se ha conseguido muestra "...".
+# Si tiene logros "hijos" (más niveles de su categoría) y ya lo conseguiste, aparece una flecha al lado.
+func mostrar_logro(conseguido: bool, nombre: String, descripcion: String, al_expandir: Callable = Callable()):
+	if not conseguido:
+		crear_etiqueta_menu("...", 38, Color(0.6, 0.6, 0.6))
+		return
+
+	if al_expandir.is_valid():
+		var fila = HBoxContainer.new()
+		fila.alignment = BoxContainer.ALIGNMENT_CENTER
+		fila.add_theme_constant_override("separation", 20)
+		menu_caja.add_child(fila)
+		var textos = VBoxContainer.new()
+		textos.add_theme_constant_override("separation", 0)
+		fila.add_child(textos)
+		crear_etiqueta_en(textos, nombre, 38, Color(1, 0.84, 0))
+		crear_etiqueta_en(textos, descripcion, 20, Color(0.6, 0.6, 0.6))
+		var flecha = crear_boton_flecha(fila, true)
+		flecha.pressed.connect(al_expandir)
+	else:
 		crear_etiqueta_menu(nombre, 38, Color(1, 0.84, 0))
 		crear_etiqueta_menu(descripcion, 20, Color(0.6, 0.6, 0.6))
-	else:
-		crear_etiqueta_menu("...", 38, Color(0.6, 0.6, 0.6))
+
+
+func crear_etiqueta_en(padre: Node, texto: String, tamano: int, color: Color) -> Label:
+	var etiqueta = Label.new()
+	etiqueta.text = texto
+	etiqueta.add_theme_font_size_override("font_size", tamano)
+	etiqueta.modulate = color
+	etiqueta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	padre.add_child(etiqueta)
+	return etiqueta
+
+
+# "Raíz" de logros de Hitbox master: el logro principal arriba y de él sale Hitbox master II
+func _on_raiz_hitbox_pulsada():
+	limpiar_menu()
+	menu_caja.add_theme_constant_override("separation", 8)
+	crear_etiqueta_menu("HITBOX MASTER", 52, Color(0, 0.6, 1))
+
+	mostrar_logro(logro_hitbox, "Hitbox master", "Clear levels 11-15 without taking damage")
+
+	# Línea que une el logro principal con el que sale de él
+	var linea = ColorRect.new()
+	linea.custom_minimum_size = Vector2(6, 40)
+	linea.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	linea.color = Color(1, 0.84, 0) if logro_hitbox2 else Color(0.4, 0.4, 0.4)
+	menu_caja.add_child(linea)
+
+	mostrar_logro(logro_hitbox2, "Hitbox master II", "Clear levels 21-25 without taking damage")
+
+	var volver = crear_boton_menu("VOLVER")
+	volver.custom_minimum_size = Vector2(240, 60)
+	volver.pressed.connect(_on_logros_pulsado.bind(0))
+	volver.grab_focus.call_deferred()
 
 
 func _on_jugar_pulsado():
@@ -764,7 +821,9 @@ func crear_boton_menu(texto: String) -> Button:
 func actualizar_velocidad():
 	var tramo_lento_1 = nivel_actual >= nivel_lento_desde and nivel_actual <= nivel_lento_hasta
 	var tramo_lento_2 = nivel_actual >= nivel_lento2_desde and nivel_actual <= nivel_lento2_hasta
-	if tramo_lento_1 or tramo_lento_2:
+	# En la opción de teléfono también va más lento en los niveles con fuego (31 a 35)
+	var fuego_en_telefono = dispositivo_actual == "telefono" and nivel_actual >= nivel_fuego and nivel_actual < nivel_armas
+	if tramo_lento_1 or tramo_lento_2 or fuego_en_telefono:
 		velocidad_jugador = velocidad_lenta
 	else:
 		velocidad_jugador = velocidad_normal
@@ -911,6 +970,10 @@ func recibir_dano():
 	# Perder el dorado (el 4.º corazón) no cuenta.
 	if nivel_actual >= nivel_lento_desde and nivel_actual <= nivel_lento_hasta and corazones <= 3:
 		dano_en_rojos = true
+	# Hitbox master II: lo mismo en los niveles 21 a 25. Con 4 corazones el golpe se lo lleva
+	# el dorado, así que no cuenta como daño; solo cuenta perder uno de los 3 rojos.
+	if nivel_actual >= nivel_memoria and nivel_actual <= nivel_lento2_hasta and corazones <= 3:
+		dano_en_rojos2 = true
 	corazones -= 1
 	actualizar_corazones()
 
@@ -1033,6 +1096,9 @@ func generar_mapa_procedural():
 	# Al empezar el nivel 11 (o reaparecer en él) empieza el intento de Hitbox master
 	if nivel_actual == nivel_corazones:
 		dano_en_rojos = false
+	# Al empezar el nivel 21 (o reaparecer en él) empieza el intento de Hitbox master II
+	if nivel_actual == nivel_memoria:
+		dano_en_rojos2 = false
 
 	# Al entrar a los niveles de memoria (21) y de slime (26) los corazones se reinician
 	if nivel_actual == nivel_memoria or nivel_actual == nivel_slime or nivel_actual == nivel_armas:
@@ -1594,11 +1660,13 @@ func actualizar_arma_visual():
 	construir_arma()  # por si cambiaste de texture pack desde el menú
 
 
-# Botones D (dash) y F (disparo) para teléfonos
+# Botones D (dash) y F (disparo) para teléfonos, y Z (consola) solo para el nombre IDK
 func crear_botones_accion():
 	# F en la esquina de abajo a la izquierda y D justo a su lado
 	boton_fuego = crear_boton_accion("F", Vector2(55, 585), _fuego_pulsado, _fuego_soltado)
 	boton_dash = crear_boton_accion("D", Vector2(145, 585), intentar_dash, _sin_accion)
+	# Z arriba a la izquierda (junto al nivel): abre la consola en el APK / teléfono
+	boton_z = crear_boton_accion("Z", Vector2(250, 50), abrir_consola, _sin_accion)
 
 
 func _fuego_pulsado():
@@ -1659,6 +1727,16 @@ func actualizar_botones_accion():
 		boton_dash.visible = es_tel and tiene_dash
 	if not tiene_arma:
 		fuego_tactil = false
+	actualizar_boton_z()
+
+
+# El botón Z solo aparece en el APK / teléfono y únicamente si el nombre de usuario es "IDK".
+# En PC no hace falta: ahí la consola se abre con la tecla Z.
+func actualizar_boton_z():
+	if boton_z == null:
+		return
+	var en_telefono = OS.has_feature("android") or dispositivo_actual == "telefono"
+	boton_z.visible = en_telefono and nombre_usuario == "IDK"
 
 
 # Dirección que se está pulsando (las flechas opuestas se cancelan)
@@ -1713,14 +1791,23 @@ func procesar_armas(delta):
 			mirando = haz.normalized()
 	elif d != Vector2.ZERO:
 		mirando = d.normalized()
+
+	# AIMBOT (solo opción TELÉFONO): apunta solo a la bala enemiga más cercana o, si no hay, a un slime en rango
+	var dir_aimbot = Vector2.ZERO
+	if aimbot_activo():
+		dir_aimbot = buscar_objetivo_aimbot()
+		if dir_aimbot != Vector2.ZERO:
+			mirando = dir_aimbot
+
 	if arma_nodo:
 		arma_nodo.rotation = mirando.angle()
 		arma_nodo.scale.y = -1.0 if mirando.x < 0 else 1.0
 
-	# Disparo: click izquierdo en PC, botón F en teléfono
+	# Disparo: click izquierdo en PC, botón F en teléfono (o solo, si el aimbot ve un objetivo)
 	var click = es_pc_real and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-	if tiene_arma and not reiniciando and (click or fuego_tactil):
-		disparar()
+	var disparo_auto = aimbot_automatico and dir_aimbot != Vector2.ZERO
+	if tiene_arma and not reiniciando and (click or fuego_tactil or disparo_auto):
+		disparar(dir_aimbot)
 
 	# Nivel 39: tutorial vacío para aprender a esquivar con dash
 	if nivel_actual == 39:
@@ -1863,11 +1950,12 @@ func crear_proyectil(pos: Vector2, vel: Vector2, lado: int, color: Color, grupo:
 
 
 # Disparo del jugador: una bolita de fuego del color del pack
-func disparar():
+func disparar(dir_forzada = Vector2.ZERO):
 	if fuego_cd > 0.0:
 		return
 	fuego_cd = 0.25
-	var bala = crear_proyectil(jugador.position + mirando * 36, mirando * 700.0, 14, color_fuego().lightened(0.3), "balas")
+	var dir = dir_forzada if dir_forzada != Vector2.ZERO else mirando
+	var bala = crear_proyectil(jugador.position + dir * 36, dir * 700.0, 14, color_fuego().lightened(0.3), "balas")
 	bala.body_entered.connect(_on_bala_cuerpo.bind(bala))
 	bala.area_entered.connect(_on_bala_area.bind(bala))
 
@@ -1894,6 +1982,78 @@ func _on_bala_area(area, bala):
 	elif area.is_in_group("rojos"):
 		area.queue_free()  # los bloques rojos se destruyen con disparos
 		bala.queue_free()
+
+
+# ---------- AIMBOT (solo teléfono) ----------
+# Niveles con slimes que disparan: 36 a 38 (slimes pequeños) y 40 (jefe). El 39 es el tutorial del dash.
+func aimbot_activo() -> bool:
+	if dispositivo_actual != "telefono" or not tiene_arma or jugador == null or reiniciando:
+		return false
+	return nivel_actual >= nivel_armas and nivel_actual != 39
+
+
+# Devuelve la dirección del disparo: 1.º la bala enemiga más cercana (una por una),
+# 2.º si no hay balas, el slime más cercano en rango. Nunca apunta a través de bloques blancos.
+func buscar_objetivo_aimbot() -> Vector2:
+	# Celdas ocupadas por bloques blancos (y sus variantes en los mods)
+	var paredes = {}
+	for pared in get_tree().get_nodes_in_group("paredes"):
+		paredes[Vector2i(floori(pared.position.x / tamaño_bloque), floori(pared.position.y / tamaño_bloque))] = true
+
+	var origen = jugador.position
+	var mejor_dir = Vector2.ZERO
+
+	# 1) Bala enemiga más cercana
+	var mejor_dist = rango_aimbot
+	for fuego in get_tree().get_nodes_in_group("fuego_boss"):
+		if fuego.is_queued_for_deletion():
+			continue
+		var dist = origen.distance_to(fuego.position)
+		if dist >= mejor_dist:
+			continue
+		var futuro = punto_con_adelanto(origen, fuego.position, fuego.get("vel"))
+		if not linea_libre(origen, futuro, paredes):
+			continue
+		mejor_dist = dist
+		mejor_dir = (futuro - origen).normalized()
+	if mejor_dir != Vector2.ZERO:
+		return mejor_dir
+
+	# 2) Sin balas: slime más cercano en rango (slimes pequeños o jefe)
+	mejor_dist = rango_aimbot
+	var objetivos = get_tree().get_nodes_in_group("enemigos") + get_tree().get_nodes_in_group("boss")
+	for slime in objetivos:
+		if slime.is_queued_for_deletion():
+			continue
+		var es_jefe = slime.is_in_group("boss")
+		var dist = origen.distance_to(slime.position) - (100.0 if es_jefe else 0.0)
+		if dist >= mejor_dist:
+			continue
+		var vel = Vector2(0, 148.5 * cos(0.9 * jefe_tiempo)) if es_jefe else Vector2.ZERO
+		var futuro = punto_con_adelanto(origen, slime.position, vel)
+		if not linea_libre(origen, futuro, paredes):
+			continue
+		mejor_dist = dist
+		mejor_dir = (futuro - origen).normalized()
+	return mejor_dir
+
+
+# Punto donde estará el objetivo cuando llegue tu bala (700 px/s)
+func punto_con_adelanto(origen: Vector2, pos: Vector2, vel: Vector2) -> Vector2:
+	var futuro = pos
+	for i in range(2):
+		futuro = pos + vel * (origen.distance_to(futuro) / 700.0)
+	return futuro
+
+
+# true si no hay ningún bloque blanco entre los dos puntos
+func linea_libre(desde: Vector2, hasta: Vector2, paredes: Dictionary) -> bool:
+	var pasos = int(desde.distance_to(hasta) / 12.0)
+	for i in range(1, pasos + 1):
+		var p = desde.lerp(hasta, float(i) / pasos)
+		if paredes.has(Vector2i(floori(p.x / tamaño_bloque), floori(p.y / tamaño_bloque))):
+			return false
+	return true
 
 
 # ---------- Dash ----------
@@ -2410,6 +2570,7 @@ func guardar_partida():
 	archivo.set_value("partida", "corazones", corazones)
 	archivo.set_value("partida", "dorado", tiene_dorado)
 	archivo.set_value("partida", "dano_rojos", dano_en_rojos)
+	archivo.set_value("partida", "dano_rojos2", dano_en_rojos2)
 	archivo.save(ARCHIVO_PARTIDA)
 
 
@@ -2430,6 +2591,7 @@ func cargar_partida():
 	corazones_max = 4 if tiene_dorado else 3
 	corazones = clampi(int(archivo.get_value("partida", "corazones", 3)), 1, corazones_max)
 	dano_en_rojos = archivo.get_value("partida", "dano_rojos", false)
+	dano_en_rojos2 = archivo.get_value("partida", "dano_rojos2", false)
 	corazones_visuales[3].visible = tiene_dorado
 	texto_nivel.text = "NIVEL: " + str(nivel_actual)
 	actualizar_corazones()
@@ -2543,6 +2705,8 @@ func teletransportar_a_nivel(nivel: int):
 	# Saltarte el nivel 11 cuenta como no haberlo jugado: no se puede ganar Hitbox master así
 	if nivel_actual > nivel_lento_desde and nivel_actual <= nivel_lento_hasta:
 		dano_en_rojos = true
+	if nivel_actual > nivel_memoria and nivel_actual <= nivel_lento2_hasta:
+		dano_en_rojos2 = true  # lo mismo para Hitbox master II (te saltaste el nivel 21)
 	generar_mapa_procedural.call_deferred()
 	mostrar_mensaje.call_deferred("TP: LEVEL %d" % nivel, Color(0.4, 0.8, 1), 430)
 
@@ -2812,6 +2976,11 @@ func _on_puerta_tocada(body):
 		if gana_hitbox:
 			logro_hitbox = true
 			guardar_logros()
+		# Terminar el nivel 25 sin perder corazones rojos (el dorado no cuenta): logro "Hitbox master II" (solo una vez)
+		var gana_hitbox2 = nivel_actual == nivel_lento2_hasta and not dano_en_rojos2 and not logro_hitbox2
+		if gana_hitbox2:
+			logro_hitbox2 = true
+			guardar_logros()
 		nivel_actual += 1
 		texto_nivel.text = "NIVEL: " + str(nivel_actual)
 		# Diferido para no modificar la física dentro de la señal
@@ -2819,6 +2988,8 @@ func _on_puerta_tocada(body):
 		if gana_hitbox:
 			# Se muestra después de generar el nivel (que borra los carteles)
 			mostrar_mensaje.call_deferred("ACHIEVEMENT: Hitbox master", Color(1, 0.84, 0), 280)
+		elif gana_hitbox2:
+			mostrar_mensaje.call_deferred("ACHIEVEMENT: Hitbox master II", Color(1, 0.84, 0), 250)
 
 
 # ==========================================
@@ -2833,6 +3004,7 @@ func cargar_logros():
 		logro_gold = archivo.get_value("logros", "gold", false)
 		logro_modder = archivo.get_value("logros", "modder", false)
 		logro_hitbox = archivo.get_value("logros", "hitbox", false)
+		logro_hitbox2 = archivo.get_value("logros", "hitbox2", false)
 		logro_door = archivo.get_value("logros", "door", false)
 		logro_slimekiller = archivo.get_value("logros", "slimekiller", false)
 		nombre_bloqueado = archivo.get_value("perfil", "bloqueado", false)
@@ -2852,6 +3024,7 @@ func guardar_logros():
 	archivo.set_value("logros", "gold", logro_gold)
 	archivo.set_value("logros", "modder", logro_modder)
 	archivo.set_value("logros", "hitbox", logro_hitbox)
+	archivo.set_value("logros", "hitbox2", logro_hitbox2)
 	archivo.set_value("logros", "door", logro_door)
 	archivo.set_value("logros", "slimekiller", logro_slimekiller)
 	archivo.set_value("perfil", "bloqueado", nombre_bloqueado)
@@ -2861,8 +3034,7 @@ func guardar_logros():
 	archivo.save(ARCHIVO_LOGROS)
 
 
-# Pantalla final: "You finished the Alpha!" + logro ¿End?
-# Si ya tenías el logro ¿End?, no se muestra: vuelves directo al menú.
+# Pantalla final: "You finished the Alpha!" + logro ¿End? (el texto del logro solo sale la primera vez)
 func terminar_alpha():
 	var primera_vez = not logro_end
 	logro_end = true
