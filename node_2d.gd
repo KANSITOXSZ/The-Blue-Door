@@ -71,7 +71,7 @@ var dano_en_rojos = false       # true si perdiste un corazón rojo en los nivel
 var logro_hitbox2 = false       # logro "Hitbox master II": pasar los niveles 21 a 25 (oscuridad con fuego) sin perder corazones rojos
 var dano_en_rojos2 = false      # true si perdiste un corazón rojo en los niveles 21 a 25 (el daño al corazón dorado no cuenta)
 var tutorial_dash_completo = false  # true cuando ya esquivaste las 5 balas del nivel 39 (no se repite nunca más)
-var boton_z: TouchScreenButton  # botón "Z" arriba a la izquierda (abre la consola en teléfono, solo con el nombre IDK)
+var boton_z: TouchScreenButton  # botón "Z" arriba a la izquierda (abre la consola en teléfono, solo para el dueño)
 var nombre_bloqueado = false    # true cuando confirmas el nombre con el check (ya no se puede cambiar)
 var boton_check: Button
 
@@ -125,6 +125,8 @@ var jefe_nombre: Label
 var tutorial_dash_tiempo = 0.0
 var tutorial_dash_esquivadas = 0
 var tutorial_dash_activo = false
+var tutorial_dash_total = 5          # balas que hay que esquivar con dash
+var tutorial_dash_intervalo = 3.0    # segundos entre cada bala del tutorial
 var consola_aviso: Label
 var debug_activo = false        # true: atraviesas paredes y los rojos no hacen daño
 var texto_debug: Label
@@ -176,6 +178,275 @@ var botones_solo_en_movil = false
 # Guarda las alturas del camino del nivel anterior para que el nuevo sea distinto
 var ultimo_camino: Array = []
 
+# ==========================================
+# IDIOMAS (Español / English)
+# ==========================================
+# Todos los textos del juego salen de esta tabla: t("clave") devuelve el texto en el idioma elegido.
+# El idioma se elige con el globo de texto (arriba a la derecha del menú) y queda guardado en el dispositivo.
+# La primera vez usa el idioma del sistema (español si el dispositivo está en español; si no, inglés).
+# Dueño del juego: escribir CLAVE_DUENO como nombre de usuario lo cambia a NOMBRE_DUENO,
+# y solo ese nombre tiene consola. Entrar 10 veces seguidas a Mods desbloquea el cambio de nombre.
+const CLAVE_DUENO = "jrrz3"
+const NOMBRE_DUENO = "KANSITOXSZ"
+const ENTRADAS_PARA_CAMBIAR_NOMBRE = 10
+var entradas_mods_seguidas = 0
+var aviso_nombre_pendiente = false
+
+const IDIOMAS = ["es", "en"]
+const NOMBRES_IDIOMA = {"es": "Español", "en": "English"}
+var idioma = "es" if OS.get_locale_language() == "es" else "en"
+var boton_idioma: Button
+var panel_idioma: PanelContainer
+var botones_idioma = {}
+
+const TEXTOS = {
+	"en": {
+		"level": "LEVEL",
+		"warning": "WARNING",
+		"big_slime": "BIG SLIME",
+		"username": "Username",
+		"confirm_name": "Confirm name (it can't be changed later)",
+		"language": "Language",
+		"achievements": "ACHIEVEMENTS",
+		"play": "PLAY",
+		"mods": "MODS",
+		"exit_game": "EXIT",
+		"back": "BACK",
+		"unlock_door": "ACHIEVEMENT UNLOCKED: Door",
+		"unlock_modder": "ACHIEVEMENT UNLOCKED: Modder",
+		"name_unlocked": "USERNAME UNLOCKED: you can change it now",
+		"mods_title": "MODS  %d/2",
+		"achievements_title": "ACHIEVEMENTS  %d/2",
+		"mod_locked_desc": "Kill the big slime to unlock this mod",
+		"mod_locked_btn": "LOCKED",
+		"mod_active": "ACTIVE",
+		"mod_use": "USE",
+		"mod_install": "INSTALL",
+		"mod_base_n": "Base",
+		"mod_base_d": "The base game, no mods",
+		"mod_ilp_n": "I love pink",
+		"mod_ilp_d": "White blocks turn pink :3, red blocks turn purple >:3 and slimes turn sky blue",
+		"mod_ily_n": "I love yellow",
+		"mod_ily_d": "White blocks turn yellow, red blocks turn orange and slimes turn lime",
+		"mod_ilg_n": "I love green",
+		"mod_ilg_d": "White blocks turn dark green, red blocks turn light green and slimes turn teal",
+		"mod_ilb_n": "I love blue",
+		"mod_ilb_d": "White blocks turn very dark blue, red blocks turn dark sky blue and slimes turn violet",
+		"mod_ils_n": "I LOVE SLIME",
+		"mod_ils_d": "White blocks use the green slime model, red blocks and shots use red slime models",
+		"ach_end_n": "End?",
+		"ach_end_d": "Finish the Alpha",
+		"ach_gold_n": "Gold",
+		"ach_gold_d": "Heart of gold!",
+		"ach_modder_n": "Modder",
+		"ach_modder_d": "Download a mod",
+		"ach_hitbox_n": "Hitbox master",
+		"ach_hitbox_d": "Clear levels 11-15 without taking damage",
+		"ach_hitbox2_n": "Hitbox master II",
+		"ach_hitbox2_d": "Clear levels 21-25 without taking damage",
+		"ach_door_n": "Door",
+		"ach_door_d": "Click the door in the menu",
+		"ach_slime_n": "Slime killer",
+		"ach_slime_d": "Kill the big slime in level 40",
+		"which_device": "What are you playing on?",
+		"phone": "PHONE",
+		"load_save": "Load save file?",
+		"saved_level": "Saved game: level %d",
+		"yes": "YES",
+		"no": "NO",
+		"memorize": "MEMORIZE!  %.1f",
+		"invincible": "INVINCIBLE: %.1f",
+		"click": "CLICK",
+		"gun_msg": "GUN!  %s = shoot",
+		"dash_msg": "DASH!  %s = dash",
+		"tut_slime": "Push into the SLIME: 1, 2 or 3 s = more power",
+		"tut_fire": "Fire! Hold longer to fly over it",
+		"tut_ghost": "Ghost blocks can only be crossed while you fly!",
+		"dash_counter": "DASH to dodge bullets: dodged %d/%d",
+		"dash_hit": "USE DASH TO DODGE!",
+		"dash_done": "Tutorial complete! Go to the door.",
+		"dash_first": "DODGE WITH DASH FIRST",
+		"ach_slime_msg": "ACHIEVEMENT: Slime killer",
+		"mod_unlocked": "MOD UNLOCKED: I LOVE SLIME",
+		"boss_defeated": "BIG SLIME DEFEATED!",
+		"kill_boss": "KILL THE BIG SLIME!",
+		"gold_heart_ach": "GOLDEN HEART!  ACHIEVEMENT: Gold",
+		"gold_heart": "GOLDEN HEART!",
+		"lantern_found": "LANTERN FOUND!",
+		"need_lantern": "YOU NEED THE LANTERN",
+		"ach_hitbox_msg": "ACHIEVEMENT: Hitbox master",
+		"ach_hitbox2_msg": "ACHIEVEMENT: Hitbox master II",
+		"paused": "PAUSED",
+		"resume": "RESUME",
+		"pause_note": "Your progress is saved when you exit",
+		"console": "CONSOLE",
+		"console_hint": "Type a command...",
+		"close": "CLOSE",
+		"unknown_cmd": "Unknown command (type a level 1-%d)",
+		"tp_msg": "TP: LEVEL %d",
+		"end_title": "YOU FINISHED THE ALPHA!",
+		"ach_unlocked": "ACHIEVEMENT UNLOCKED!",
+		"menu": "MENU",
+	},
+	"es": {
+		"level": "NIVEL",
+		"warning": "CUIDADO",
+		"big_slime": "SLIME GIGANTE",
+		"username": "Nombre de usuario",
+		"confirm_name": "Confirmar nombre (no se podrá cambiar después)",
+		"language": "Idioma",
+		"achievements": "LOGROS",
+		"play": "JUGAR",
+		"mods": "MODS",
+		"exit_game": "SALIR",
+		"back": "VOLVER",
+		"unlock_door": "LOGRO DESBLOQUEADO: Puerta",
+		"unlock_modder": "LOGRO DESBLOQUEADO: Modder",
+		"name_unlocked": "NOMBRE DESBLOQUEADO: ya puedes cambiarlo",
+		"mods_title": "MODS  %d/2",
+		"achievements_title": "LOGROS  %d/2",
+		"mod_locked_desc": "Mata al slime gigante para desbloquear este mod",
+		"mod_locked_btn": "BLOQUEADO",
+		"mod_active": "ACTIVO",
+		"mod_use": "USAR",
+		"mod_install": "INSTALAR",
+		"mod_base_n": "Base",
+		"mod_base_d": "El juego base, sin mods",
+		"mod_ilp_n": "Me encanta el rosa",
+		"mod_ilp_d": "Los bloques blancos se vuelven rosas :3, los rojos morados >:3 y los slimes celestes",
+		"mod_ily_n": "Me encanta el amarillo",
+		"mod_ily_d": "Los bloques blancos se vuelven amarillos, los rojos naranjas y los slimes lima",
+		"mod_ilg_n": "Me encanta el verde",
+		"mod_ilg_d": "Los bloques blancos se vuelven verde oscuro, los rojos verde claro y los slimes turquesa",
+		"mod_ilb_n": "Me encanta el azul",
+		"mod_ilb_d": "Los bloques blancos se vuelven azul muy oscuro, los rojos celeste oscuro y los slimes violeta",
+		"mod_ils_n": "ME ENCANTA EL SLIME",
+		"mod_ils_d": "Los bloques blancos usan el modelo de slime verde; los bloques rojos y los disparos usan modelos de slime rojo",
+		"ach_end_n": "¿Fin?",
+		"ach_end_d": "Termina la Alpha",
+		"ach_gold_n": "Oro",
+		"ach_gold_d": "¡Corazón de oro!",
+		"ach_modder_n": "Modder",
+		"ach_modder_d": "Descarga un mod",
+		"ach_hitbox_n": "Maestro de hitbox",
+		"ach_hitbox_d": "Supera los niveles 11-15 sin recibir daño",
+		"ach_hitbox2_n": "Maestro de hitbox II",
+		"ach_hitbox2_d": "Supera los niveles 21-25 sin recibir daño",
+		"ach_door_n": "Puerta",
+		"ach_door_d": "Haz clic en la puerta del menú",
+		"ach_slime_n": "Asesino de slimes",
+		"ach_slime_d": "Mata al slime gigante en el nivel 40",
+		"which_device": "¿En qué juegas?",
+		"phone": "TELÉFONO",
+		"load_save": "¿Cargar partida guardada?",
+		"saved_level": "Partida guardada: nivel %d",
+		"yes": "SÍ",
+		"no": "NO",
+		"memorize": "¡MEMORIZA!  %.1f",
+		"invincible": "INVENCIBLE: %.1f",
+		"click": "CLIC",
+		"gun_msg": "¡PISTOLA!  %s = disparar",
+		"dash_msg": "¡DASH!  %s = dash",
+		"tut_slime": "Empuja contra el SLIME: 1, 2 o 3 s = más fuerza",
+		"tut_fire": "¡Fuego! Mantén más tiempo para volar sobre él",
+		"tut_ghost": "¡Los bloques fantasma solo se cruzan mientras vuelas!",
+		"dash_counter": "DASH para esquivar balas: esquivadas %d/%d",
+		"dash_hit": "¡USA DASH PARA ESQUIVAR!",
+		"dash_done": "¡Tutorial completado! Ve a la puerta.",
+		"dash_first": "PRIMERO ESQUIVA CON DASH",
+		"ach_slime_msg": "LOGRO: Asesino de slimes",
+		"mod_unlocked": "MOD DESBLOQUEADO: ME ENCANTA EL SLIME",
+		"boss_defeated": "¡SLIME GIGANTE DERROTADO!",
+		"kill_boss": "¡MATA AL SLIME GIGANTE!",
+		"gold_heart_ach": "¡CORAZÓN DORADO!  LOGRO: Oro",
+		"gold_heart": "¡CORAZÓN DORADO!",
+		"lantern_found": "¡LINTERNA ENCONTRADA!",
+		"need_lantern": "NECESITAS LA LINTERNA",
+		"ach_hitbox_msg": "LOGRO: Maestro de hitbox",
+		"ach_hitbox2_msg": "LOGRO: Maestro de hitbox II",
+		"paused": "PAUSA",
+		"resume": "SEGUIR",
+		"pause_note": "Tu progreso se guarda al salir",
+		"console": "CONSOLA",
+		"console_hint": "Escribe un comando...",
+		"close": "CERRAR",
+		"unknown_cmd": "Comando desconocido (escribe un nivel 1-%d)",
+		"tp_msg": "TP: NIVEL %d",
+		"end_title": "¡TERMINASTE LA ALPHA!",
+		"ach_unlocked": "¡LOGRO DESBLOQUEADO!",
+		"menu": "MENÚ",
+	},
+}
+
+
+# Devuelve el texto de la clave en el idioma actual (si falta, usa inglés; si tampoco, la propia clave)
+func t(clave: String) -> String:
+	var tabla = TEXTOS.get(idioma, TEXTOS["en"])
+	if tabla.has(clave):
+		return tabla[clave]
+	return TEXTOS["en"].get(clave, clave)
+
+
+# Botón con un globo de texto (arriba a la derecha). Al pulsarlo se despliegan los dos idiomas.
+func crear_selector_idioma():
+	boton_idioma = Button.new()
+	boton_idioma.custom_minimum_size = Vector2(64, 50)
+	boton_idioma.position = Vector2(1152 - 84, 20)
+	boton_idioma.tooltip_text = t("language")
+
+	# El globo: un cuadro con esquinas cortadas y una colita abajo a la izquierda
+	var globo = Polygon2D.new()
+	globo.polygon = PackedVector2Array([
+		Vector2(14, 8), Vector2(50, 8), Vector2(54, 12), Vector2(54, 28), Vector2(50, 32),
+		Vector2(30, 32), Vector2(20, 42), Vector2(21, 32), Vector2(14, 32), Vector2(10, 28), Vector2(10, 12)])
+	globo.color = Color(1, 1, 1)
+	boton_idioma.add_child(globo)
+	# Los tres puntitos del globo
+	for i in range(3):
+		var punto = ColorRect.new()
+		punto.color = Color(0, 0.6, 1)
+		punto.size = Vector2(6, 6)
+		punto.position = Vector2(19 + i * 11, 17)
+		punto.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		boton_idioma.add_child(punto)
+	boton_idioma.pressed.connect(_on_idioma_pulsado)
+	menu_capa.add_child(boton_idioma)
+
+	# Lista de idiomas, debajo del globo
+	panel_idioma = PanelContainer.new()
+	panel_idioma.position = Vector2(1152 - 224, 76)
+	panel_idioma.visible = false
+	var caja = VBoxContainer.new()
+	caja.add_theme_constant_override("separation", 6)
+	panel_idioma.add_child(caja)
+	for codigo in IDIOMAS:
+		var boton = Button.new()
+		boton.text = NOMBRES_IDIOMA[codigo]
+		boton.custom_minimum_size = Vector2(200, 50)
+		boton.add_theme_font_size_override("font_size", 26)
+		boton.pressed.connect(_elegir_idioma.bind(codigo))
+		caja.add_child(boton)
+		botones_idioma[codigo] = boton
+	menu_capa.add_child(panel_idioma)
+
+
+func _on_idioma_pulsado():
+	panel_idioma.visible = not panel_idioma.visible
+	# El idioma que ya está puesto aparece apagado
+	for codigo in botones_idioma:
+		botones_idioma[codigo].disabled = codigo == idioma
+
+
+func _elegir_idioma(codigo: String):
+	idioma = codigo
+	guardar_logros()
+	panel_idioma.visible = false
+	campo_nombre.placeholder_text = t("username")
+	boton_check.tooltip_text = t("confirm_name")
+	boton_idioma.tooltip_text = t("language")
+	mostrar_pantalla_principal()  # se vuelve a dibujar el menú con el nuevo idioma
+
+
 func _ready():
 	randomize()
 	agregar_teclas_wasd()
@@ -198,7 +469,7 @@ func _ready():
 	add_child(capa_interfaz)
 
 	texto_nivel = Label.new()
-	texto_nivel.text = "NIVEL: " + str(nivel_actual)
+	texto_nivel.text = t("level") + ": " + str(nivel_actual)
 	texto_nivel.position = Vector2(25, 25)
 	texto_nivel.scale = Vector2(2, 2)
 	texto_nivel.modulate = Color(0, 0.6, 1)
@@ -214,7 +485,7 @@ func _ready():
 
 	# Cartel de advertencia (nivel 10) y mensajes cortos
 	texto_warning = Label.new()
-	texto_warning.text = "WARNING"
+	texto_warning.text = t("warning")
 	texto_warning.position = Vector2(480, 25)
 	texto_warning.scale = Vector2(2.5, 2.5)
 	texto_warning.modulate = Color(1, 0.8, 0)
@@ -266,7 +537,7 @@ func _ready():
 	jefe_barra.visible = false
 	capa_interfaz.add_child(jefe_barra)
 	jefe_nombre = Label.new()
-	jefe_nombre.text = "BIG SLIME"
+	jefe_nombre.text = t("big_slime")
 	jefe_nombre.position = Vector2(326, 96)
 	jefe_nombre.modulate = Color(0.8, 1, 0.8)
 	jefe_nombre.visible = false
@@ -378,7 +649,7 @@ func crear_menu_principal():
 
 	# Nombre de usuario: arriba a la izquierda, máximo 10 letras
 	campo_nombre = LineEdit.new()
-	campo_nombre.placeholder_text = "Username"
+	campo_nombre.placeholder_text = t("username")
 	campo_nombre.max_length = 10
 	campo_nombre.text = nombre_usuario
 	campo_nombre.position = Vector2(20, 20)
@@ -393,7 +664,7 @@ func crear_menu_principal():
 	boton_check = Button.new()
 	boton_check.custom_minimum_size = Vector2(50, 50)
 	boton_check.position = Vector2(270, 20)
-	boton_check.tooltip_text = "Confirm name (it can't be changed later)"
+	boton_check.tooltip_text = t("confirm_name")
 	var marca = Line2D.new()
 	marca.points = PackedVector2Array([Vector2(12, 27), Vector2(21, 37), Vector2(39, 14)])
 	marca.width = 6
@@ -402,11 +673,17 @@ func crear_menu_principal():
 	boton_check.pressed.connect(_on_check_pulsado)
 	menu_capa.add_child(boton_check)
 
+	crear_selector_idioma()
 	mostrar_pantalla_principal()
 
 
 func _on_nombre_cambiado(nuevo: String):
 	nombre_usuario = nuevo.strip_edges().left(10)
+	# Código secreto del dueño: al escribirlo se convierte solo en su nombre (y activa la consola)
+	if nombre_usuario.to_lower() == CLAVE_DUENO:
+		nombre_usuario = NOMBRE_DUENO
+		campo_nombre.text = NOMBRE_DUENO
+		campo_nombre.caret_column = NOMBRE_DUENO.length()
 	guardar_logros()
 	actualizar_check()
 	actualizar_boton_z()
@@ -443,28 +720,29 @@ func mostrar_pantalla_principal():
 	menu_caja.add_child(puerta_deco)
 
 	crear_etiqueta_menu("THE BLUE DOOR", 72, Color(0, 0.6, 1))
-	crear_etiqueta_menu("ALPHA 3.0", 24, Color(0.6, 0.6, 0.6))
+	crear_etiqueta_menu("ALPHA 3.2.1", 24, Color(0.6, 0.6, 0.6))
 
 	var fila = HBoxContainer.new()
 	fila.alignment = BoxContainer.ALIGNMENT_CENTER
 	fila.add_theme_constant_override("separation", 30)
 	menu_caja.add_child(fila)
 
-	var boton_logros = crear_boton_en(fila, "LOGROS", 220, 70, 30)
+	var boton_logros = crear_boton_en(fila, t("achievements"), 220, 70, 30)
 	boton_logros.pressed.connect(_on_logros_pulsado)
 
-	var boton_jugar = crear_boton_en(fila, "JUGAR", 280, 80, 40)
+	var boton_jugar = crear_boton_en(fila, t("play"), 280, 80, 40)
 	boton_jugar.pressed.connect(_on_jugar_pulsado)
 
-	var boton_mods = crear_boton_en(fila, "MODS", 220, 70, 30)
-	boton_mods.pressed.connect(_on_mods_pulsado)
+	var boton_mods = crear_boton_en(fila, t("mods"), 220, 70, 30)
+	boton_mods.pressed.connect(_on_mods_desde_menu)
 
 	# SALIR: debajo de JUGAR, un poco más pequeño
-	var boton_salir = crear_boton_en(menu_caja, "SALIR", 200, 60, 28)
+	var boton_salir = crear_boton_en(menu_caja, t("exit_game"), 200, 60, 28)
 	boton_salir.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	boton_salir.pressed.connect(_on_salir_pulsado)
 
 	campo_nombre.visible = true
+	boton_idioma.visible = true
 	actualizar_check()
 	boton_jugar.grab_focus.call_deferred()  # en PC se puede pulsar con Enter
 
@@ -477,7 +755,7 @@ func _on_puerta_menu_click(event):
 		logro_door = true
 		guardar_logros()
 		var aviso = Label.new()
-		aviso.text = "ACHIEVEMENT UNLOCKED: Door"
+		aviso.text = t("unlock_door")
 		aviso.add_theme_font_size_override("font_size", 28)
 		aviso.modulate = Color(1, 0.84, 0)
 		aviso.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -500,6 +778,8 @@ func limpiar_menu():
 	if campo_nombre:
 		campo_nombre.visible = false  # el nombre solo se ve en la pantalla principal
 		boton_check.visible = false
+		boton_idioma.visible = false
+		panel_idioma.visible = false
 	for hijo in menu_caja.get_children():
 		menu_caja.remove_child(hijo)
 		hijo.queue_free()
@@ -524,12 +804,26 @@ func crear_boton_en(padre: Node, texto: String, ancho: int, alto: int, fuente: i
 	return boton
 
 
+# Botón MODS del menú principal: si entras 10 veces seguidas (sin pasar por Logros ni Jugar)
+# se desbloquea el nombre de usuario para poder cambiarlo otra vez.
+func _on_mods_desde_menu():
+	entradas_mods_seguidas += 1
+	if entradas_mods_seguidas >= ENTRADAS_PARA_CAMBIAR_NOMBRE:
+		entradas_mods_seguidas = 0
+		if nombre_bloqueado:
+			nombre_bloqueado = false
+			campo_nombre.editable = true
+			guardar_logros()
+			aviso_nombre_pendiente = true
+	_on_mods_pulsado()
+
+
 # MODS: lista con foto (letras), descripción y botón INSTALAR / USAR / ACTIVO
 func _on_mods_pulsado(logro_nuevo = false, pagina = 0):
 	pagina_mods = pagina
 	limpiar_menu()
 	menu_caja.add_theme_constant_override("separation", 6)
-	crear_etiqueta_menu("MODS  %d/2" % (pagina_mods + 1), 52, Color(0, 0.6, 1))
+	crear_etiqueta_menu(t("mods_title") % (pagina_mods + 1), 52, Color(0, 0.6, 1))
 
 	var inicio = pagina_mods * 5
 	var fin = mini(inicio + 5, lista_mods.size())
@@ -537,7 +831,10 @@ func _on_mods_pulsado(logro_nuevo = false, pagina = 0):
 		crear_fila_mod(lista_mods[i])
 
 	if logro_nuevo:
-		crear_etiqueta_menu("ACHIEVEMENT UNLOCKED: Modder", 26, Color(1, 0.84, 0))
+		crear_etiqueta_menu(t("unlock_modder"), 26, Color(1, 0.84, 0))
+	if aviso_nombre_pendiente:
+		aviso_nombre_pendiente = false
+		crear_etiqueta_menu(t("name_unlocked"), 26, Color(0.4, 1, 0.4))
 
 	var fila_paginas = HBoxContainer.new()
 	fila_paginas.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -546,7 +843,7 @@ func _on_mods_pulsado(logro_nuevo = false, pagina = 0):
 	if pagina_mods > 0:
 		var anterior = crear_boton_flecha(fila_paginas, false)
 		anterior.pressed.connect(_on_mods_pulsado.bind(false, pagina_mods - 1))
-	var volver = crear_boton_en(fila_paginas, "VOLVER", 240, 60, 30)
+	var volver = crear_boton_en(fila_paginas, t("back"), 240, 60, 30)
 	volver.pressed.connect(_volver_de_mods)
 	if pagina_mods < 1:
 		var siguiente = crear_boton_flecha(fila_paginas, true)
@@ -585,13 +882,14 @@ func crear_fila_mod(mod: Dictionary):
 	textos.custom_minimum_size = Vector2(560, 0)
 	textos.alignment = BoxContainer.ALIGNMENT_CENTER
 	fila.add_child(textos)
+	var bloqueado = not mod_desbloqueado(mod["id"])
 	var nombre = Label.new()
-	nombre.text = mod["nombre"]
+	nombre.text = "???" if bloqueado else t("mod_" + mod["id"] + "_n")
 	nombre.add_theme_font_size_override("font_size", 28)
 	nombre.modulate = Color(1, 1, 1)
 	textos.add_child(nombre)
 	var desc = Label.new()
-	desc.text = mod["desc"]
+	desc.text = t("mod_locked_desc") if bloqueado else t("mod_" + mod["id"] + "_d")
 	desc.add_theme_font_size_override("font_size", 18)
 	desc.modulate = Color(0.65, 0.65, 0.65)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -599,19 +897,31 @@ func crear_fila_mod(mod: Dictionary):
 
 	# Botón según el estado del mod
 	var boton = crear_boton_en(fila, "", 200, 54, 24)
-	if mod["id"] == mod_activo:
-		boton.text = "ACTIVO"
+	if bloqueado:
+		boton.text = t("mod_locked_btn")
+		boton.disabled = true
+	elif mod["id"] == mod_activo:
+		boton.text = t("mod_active")
 		boton.disabled = true
 	elif mods_instalados.has(mod["id"]):
-		boton.text = "USAR"
+		boton.text = t("mod_use")
 		boton.pressed.connect(_usar_mod.bind(mod["id"]))
 	else:
-		boton.text = "INSTALAR"
+		boton.text = t("mod_install")
 		boton.pressed.connect(_instalar_mod.bind(mod["id"]))
+
+
+# Algunos mods hay que ganárselos: ILS se desbloquea al matar al slime gigante del nivel 40
+func mod_desbloqueado(id: String) -> bool:
+	if id == "ils":
+		return logro_slimekiller
+	return true
 
 
 # Instalar un mod (el logro "Modder" se consigue con el primero que instales)
 func _instalar_mod(id: String):
+	if not mod_desbloqueado(id):
+		return
 	if not mods_instalados.has(id):
 		mods_instalados.append(id)
 	var primera_vez = not logro_modder
@@ -621,6 +931,8 @@ func _instalar_mod(id: String):
 
 
 func _usar_mod(id: String):
+	if not mod_desbloqueado(id):
+		return
 	mod_activo = id
 	guardar_logros()
 	_on_mods_pulsado(false, pagina_mods)
@@ -680,20 +992,21 @@ func poner_skin(bloque: Node, skin: Dictionary):
 # LOGROS: 3 espacios. Los que no se han descubierto muestran "..."
 # Logro 1: "¿End?" (terminar la Alpha). Logro 2: "Gold" (conseguir el corazón dorado).
 func _on_logros_pulsado(pagina = 0):
+	entradas_mods_seguidas = 0  # entrar a otra pantalla rompe la racha de entradas a Mods
 	limpiar_menu()
 	menu_caja.add_theme_constant_override("separation", 6)  # 4 logros: menos espacio para que quepan
-	crear_etiqueta_menu("LOGROS  %d/2" % (pagina + 1), 52, Color(0, 0.6, 1))
+	crear_etiqueta_menu(t("achievements_title") % (pagina + 1), 52, Color(0, 0.6, 1))
 
 	if pagina == 0:
-		mostrar_logro(logro_end, "¿End?", "Finish the Alpha")
-		mostrar_logro(logro_gold, "Gold", "Heart of gold!")
-		mostrar_logro(logro_modder, "Modder", "Download a mod")
+		mostrar_logro(logro_end, t("ach_end_n"), t("ach_end_d"))
+		mostrar_logro(logro_gold, t("ach_gold_n"), t("ach_gold_d"))
+		mostrar_logro(logro_modder, t("ach_modder_n"), t("ach_modder_d"))
 		# Hitbox master tiene una flecha: muestra su "raíz" de logros (Hitbox master II)
-		mostrar_logro(logro_hitbox, "Hitbox master", "Clear levels 11-15 without taking damage", _on_raiz_hitbox_pulsada)
+		mostrar_logro(logro_hitbox, t("ach_hitbox_n"), t("ach_hitbox_d"), _on_raiz_hitbox_pulsada)
 	else:
 		# Página 2: logros que todavía no existen en esta versión (siguen sin descubrir)
-		mostrar_logro(logro_door, "Door", "Click the door in the menu")
-		mostrar_logro(logro_slimekiller, "Slime killer", "Kill the big slime in level 40")
+		mostrar_logro(logro_door, t("ach_door_n"), t("ach_door_d"))
+		mostrar_logro(logro_slimekiller, t("ach_slime_n"), t("ach_slime_d"))
 		for i in range(2):
 			mostrar_logro(false, "", "")
 
@@ -706,7 +1019,7 @@ func _on_logros_pulsado(pagina = 0):
 	if pagina > 0:
 		var anterior = crear_boton_flecha(fila, false)
 		anterior.pressed.connect(_on_logros_pulsado.bind(pagina - 1))
-	var volver = crear_boton_en(fila, "VOLVER", 240, 60, 36)
+	var volver = crear_boton_en(fila, t("back"), 240, 60, 36)
 	volver.pressed.connect(_volver_de_mods)
 	volver.grab_focus.call_deferred()
 	if pagina < 1:
@@ -768,9 +1081,9 @@ func crear_etiqueta_en(padre: Node, texto: String, tamano: int, color: Color) ->
 func _on_raiz_hitbox_pulsada():
 	limpiar_menu()
 	menu_caja.add_theme_constant_override("separation", 8)
-	crear_etiqueta_menu("HITBOX MASTER", 52, Color(0, 0.6, 1))
+	crear_etiqueta_menu(t("ach_hitbox_n").to_upper(), 52, Color(0, 0.6, 1))
 
-	mostrar_logro(logro_hitbox, "Hitbox master", "Clear levels 11-15 without taking damage")
+	mostrar_logro(logro_hitbox, t("ach_hitbox_n"), t("ach_hitbox_d"))
 
 	# Línea que une el logro principal con el que sale de él
 	var linea = ColorRect.new()
@@ -779,9 +1092,9 @@ func _on_raiz_hitbox_pulsada():
 	linea.color = Color(1, 0.84, 0) if logro_hitbox2 else Color(0.4, 0.4, 0.4)
 	menu_caja.add_child(linea)
 
-	mostrar_logro(logro_hitbox2, "Hitbox master II", "Clear levels 21-25 without taking damage")
+	mostrar_logro(logro_hitbox2, t("ach_hitbox2_n"), t("ach_hitbox2_d"))
 
-	var volver = crear_boton_menu("VOLVER")
+	var volver = crear_boton_menu(t("back"))
 	volver.custom_minimum_size = Vector2(240, 60)
 	volver.pressed.connect(_on_logros_pulsado.bind(0))
 	volver.grab_focus.call_deferred()
@@ -789,10 +1102,11 @@ func _on_raiz_hitbox_pulsada():
 
 func _on_jugar_pulsado():
 	# Segunda pantalla del menú: ¿En qué juegas?
+	entradas_mods_seguidas = 0
 	limpiar_menu()
 
 	var pregunta = Label.new()
-	pregunta.text = "¿En qué juegas?"
+	pregunta.text = t("which_device")
 	pregunta.add_theme_font_size_override("font_size", 56)
 	pregunta.modulate = Color(0, 0.6, 1)
 	pregunta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -801,7 +1115,7 @@ func _on_jugar_pulsado():
 	var boton_pc = crear_boton_menu("PC")
 	boton_pc.pressed.connect(_elegir_dispositivo.bind("pc"))
 
-	var boton_telefono = crear_boton_menu("TELÉFONO")
+	var boton_telefono = crear_boton_menu(t("phone"))
 	boton_telefono.pressed.connect(_elegir_dispositivo.bind("telefono"))
 
 	boton_pc.grab_focus.call_deferred()
@@ -854,12 +1168,12 @@ func preguntar_cargar_partida():
 	archivo.load(ARCHIVO_PARTIDA)
 	var nivel_guardado = int(archivo.get_value("partida", "nivel", 1))
 
-	crear_etiqueta_menu("Load save file?", 56, Color(0, 0.6, 1))
-	crear_etiqueta_menu("Saved game: level %d" % nivel_guardado, 26, Color(0.6, 0.6, 0.6))
+	crear_etiqueta_menu(t("load_save"), 56, Color(0, 0.6, 1))
+	crear_etiqueta_menu(t("saved_level") % nivel_guardado, 26, Color(0.6, 0.6, 0.6))
 
-	var si = crear_boton_menu("YES")
+	var si = crear_boton_menu(t("yes"))
 	si.pressed.connect(_on_cargar_si)
-	var no = crear_boton_menu("NO")
+	var no = crear_boton_menu(t("no"))
 	no.pressed.connect(iniciar_juego)
 	si.grab_focus.call_deferred()
 
@@ -934,7 +1248,7 @@ func _physics_process(delta):
 			oscuridad.color = Color(0, 0, 0)  # vuelve la oscuridad
 			texto_memoria.visible = false
 		else:
-			texto_memoria.text = "¡MEMORIZA!  %.1f" % tiempo_revelado
+			texto_memoria.text = t("memorize") % tiempo_revelado
 
 	# Cuenta regresiva de invencibilidad + parpadeo del personaje
 	if tiempo_invulnerable > 0:
@@ -942,7 +1256,7 @@ func _physics_process(delta):
 		if tiempo_invulnerable <= 0:
 			terminar_invencibilidad()
 		else:
-			texto_invencible.text = "INVENCIBLE: %.1f" % tiempo_invulnerable
+			texto_invencible.text = t("invincible") % tiempo_invulnerable
 			if jugador:
 				var visible_ahora = int(tiempo_invulnerable * 8) % 2 == 0
 				jugador.modulate = Color(1, 1, 1, 1.0 if visible_ahora else 0.2)
@@ -989,7 +1303,7 @@ func recibir_dano():
 			nivel_actual = nivel_memoria
 		else:
 			nivel_actual = nivel_corazones
-		texto_nivel.text = "NIVEL: " + str(nivel_actual)
+		texto_nivel.text = t("level") + ": " + str(nivel_actual)
 		reiniciando = true
 		terminar_invencibilidad()
 		generar_mapa_procedural.call_deferred()
@@ -1015,7 +1329,7 @@ func mostrar_mensaje(texto: String, color: Color, x: float):
 	texto_warning.visible = true
 	await get_tree().create_timer(2.0).timeout
 	if texto_warning.text == texto:
-		texto_warning.text = "WARNING"
+		texto_warning.text = t("warning")
 		texto_warning.position = Vector2(480, 25)
 		texto_warning.modulate = Color(1, 0.8, 0)
 		texto_warning.visible = nivel_actual == 10
@@ -1312,9 +1626,9 @@ func terminar_generacion():
 	actualizar_botones_accion()
 	var es_tel = dispositivo_actual == "telefono"
 	if nivel_actual == nivel_armas:
-		mostrar_mensaje.call_deferred("GUN!  " + ("F" if es_tel else "CLICK") + " = shoot", Color(1, 0.84, 0), 330)
+		mostrar_mensaje.call_deferred(t("gun_msg") % ("F" if es_tel else t("click")), Color(1, 0.84, 0), 330)
 	elif nivel_actual == nivel_dash:
-		mostrar_mensaje.call_deferred("DASH!  " + ("D" if es_tel else "SHIFT") + " = dash", Color(0.5, 0.9, 1), 330)
+		mostrar_mensaje.call_deferred(t("dash_msg") % ("D" if es_tel else "SHIFT"), Color(0.5, 0.9, 1), 330)
 
 
 # ==========================================
@@ -1407,7 +1721,7 @@ func generar_nivel_slime():
 
 	# Mini tutorial del nivel 26: texto y flechas parpadeantes
 	if nivel_actual == nivel_slime:
-		texto_tutorial.text = "Push into the SLIME: 1, 2 or 3 s = more power"
+		texto_tutorial.text = t("tut_slime")
 		texto_tutorial.visible = true
 		# Flechas hacia atrás, hacia el slime
 		for x in [215, 150, 85]:
@@ -1416,7 +1730,7 @@ func generar_nivel_slime():
 		for x in [420, 490, 560]:
 			crear_flecha_tutorial(Vector2(x, 4 * tamaño_bloque + 32), true)
 	elif nivel_actual == nivel_fuego:
-		texto_tutorial.text = "Fire! Hold longer to fly over it"
+		texto_tutorial.text = t("tut_fire")
 		texto_tutorial.visible = true
 
 
@@ -1660,7 +1974,7 @@ func actualizar_arma_visual():
 	construir_arma()  # por si cambiaste de texture pack desde el menú
 
 
-# Botones D (dash) y F (disparo) para teléfonos, y Z (consola) solo para el nombre IDK
+# Botones D (dash) y F (disparo) para teléfonos, y Z (consola) solo para el dueño
 func crear_botones_accion():
 	# F en la esquina de abajo a la izquierda y D justo a su lado
 	boton_fuego = crear_boton_accion("F", Vector2(55, 585), _fuego_pulsado, _fuego_soltado)
@@ -1730,13 +2044,19 @@ func actualizar_botones_accion():
 	actualizar_boton_z()
 
 
-# El botón Z solo aparece en el APK / teléfono y únicamente si el nombre de usuario es "IDK".
-# En PC no hace falta: ahí la consola se abre con la tecla Z.
+# La consola es solo del dueño: hay que tener el nombre de usuario KANSITOXSZ
+# (se consigue escribiendo el código secreto en el menú). Vale en PC y en teléfono.
+func tiene_consola() -> bool:
+	return nombre_usuario == NOMBRE_DUENO
+
+
+# El botón Z solo aparece en teléfono y únicamente para el dueño.
+# En PC la consola se abre con la tecla Z (también solo para el dueño).
 func actualizar_boton_z():
 	if boton_z == null:
 		return
 	var en_telefono = OS.has_feature("android") or dispositivo_actual == "telefono"
-	boton_z.visible = en_telefono and nombre_usuario == "IDK"
+	boton_z.visible = en_telefono and tiene_consola()
 
 
 # Dirección que se está pulsando (las flechas opuestas se cancelan)
@@ -2098,38 +2418,70 @@ func generar_nivel_dash():
 	# Campo vacío: solo el jugador, las balas y la puerta bloqueada por el tutorial.
 	tutorial_dash_tiempo = 0.0
 	tutorial_dash_esquivadas = 0
+	puerta.position = Vector2((columnas - 1) * tamaño_bloque, 5 * tamaño_bloque)
+
+	# Si ya completaste el tutorial una vez, no se repite nunca más:
+	# la puerta está abierta desde el principio (por ejemplo, al volver desde el nivel 40).
+	if tutorial_dash_completo:
+		tutorial_dash_activo = false
+		tutorial_dash_esquivadas = tutorial_dash_total
+		puerta.visible = true
+		texto_tutorial.visible = false
+		return
+
 	tutorial_dash_activo = true
 	puerta.visible = false
-	puerta.position = Vector2((columnas - 1) * tamaño_bloque, 5 * tamaño_bloque)
 	texto_tutorial.visible = true
-	texto_tutorial.text = "DASH para esquivar balas: esquivadas 0/5"
 	texto_tutorial.position = Vector2(230, 80)
+	actualizar_texto_tutorial_dash()
+
+
+# ÚNICO contador del tutorial: este texto es el que se actualiza al esquivar
+func actualizar_texto_tutorial_dash():
+	texto_tutorial.text = t("dash_counter") % [tutorial_dash_esquivadas, tutorial_dash_total]
 
 
 func procesar_tutorial_dash(delta):
 	if not tutorial_dash_activo or jugador == null or reiniciando:
 		return
 	tutorial_dash_tiempo += delta
-	if tutorial_dash_tiempo >= 5.0:
+	if tutorial_dash_tiempo >= tutorial_dash_intervalo:
 		tutorial_dash_tiempo = 0.0
 		var origen = Vector2(columnas * tamaño_bloque + 20, randf_range(100, 540))
-		var bala = crear_proyectil(origen, Vector2(-320.0, 0), 28, color_slime(), "balas_tutorial")
+		# La bala sale hacia donde estás tú en el momento del disparo
+		var direccion = (jugador.position - origen).normalized()
+		var bala = crear_proyectil(origen, direccion * 320.0, 28, color_slime(), "balas_tutorial")
 		bala.body_entered.connect(_on_bala_tutorial_cuerpo.bind(bala))
 
 
 func _on_bala_tutorial_cuerpo(body, bala):
 	if body != jugador or not is_instance_valid(bala) or bala.is_queued_for_deletion():
 		return
+	# Si el tutorial ya terminó, las balas que quedaban en el aire no hacen nada
+	if not tutorial_dash_activo:
+		bala.queue_free()
+		return
 	if dash_activo > 0.0:
 		tutorial_dash_esquivadas += 1
-		mostrar_mensaje("¡ESQUIVADA! %d/5" % tutorial_dash_esquivadas, Color(0.5, 0.9, 1), 400)
-		if tutorial_dash_esquivadas >= 5:
-			tutorial_dash_activo = false
-			puerta.visible = true
-			texto_tutorial.text = "¡Tutorial completado! Ve a la puerta."
+		actualizar_texto_tutorial_dash()
+		# El contador parpadea en celeste para avisar que esquivaste (sin otro cartel ni otro número)
+		texto_tutorial.modulate = Color(0.5, 0.95, 1)
+		var tween = texto_tutorial.create_tween()
+		tween.tween_property(texto_tutorial, "modulate", Color(1, 1, 0.5), 0.4)
+		if tutorial_dash_esquivadas >= tutorial_dash_total:
+			completar_tutorial_dash()
 	else:
-		mostrar_mensaje("¡USA DASH PARA ESQUIVAR!", Color(1, 0.3, 0.3), 330)
+		mostrar_mensaje(t("dash_hit"), Color(1, 0.3, 0.3), 330)
 	bala.queue_free()
+
+
+# Se guarda en el dispositivo: el tutorial no se vuelve a pedir
+func completar_tutorial_dash():
+	tutorial_dash_activo = false
+	tutorial_dash_completo = true
+	guardar_logros()
+	puerta.visible = true
+	texto_tutorial.text = t("dash_done")
 
 
 func generar_nivel_jefe():
@@ -2263,9 +2615,12 @@ func matar_jefe():
 	if not logro_slimekiller:
 		logro_slimekiller = true
 		guardar_logros()
-		mostrar_mensaje("ACHIEVEMENT: Slime killer", Color(1, 0.84, 0), 250)
+		mostrar_mensaje(t("ach_slime_msg"), Color(1, 0.84, 0), 250)
+		# Premio: el mod I LOVE SLIME queda desbloqueado (se instala desde Mods)
+		await get_tree().create_timer(2.2).timeout
+		mostrar_mensaje(t("mod_unlocked"), Color(0.4, 1, 0.4), 250)
 	else:
-		mostrar_mensaje("BIG SLIME DEFEATED!", Color(1, 0.84, 0), 280)
+		mostrar_mensaje(t("boss_defeated"), Color(1, 0.84, 0), 280)
 
 
 # ---------- Lógica del slime ----------
@@ -2382,7 +2737,7 @@ func lanzar_jugador():
 			jugador.add_collision_exception_with(pasa)
 
 	if nivel_actual == nivel_slime:
-		texto_tutorial.text = "Ghost blocks can only be crossed while you fly!"
+		texto_tutorial.text = t("tut_ghost")
 
 
 func terminar_impulso():
@@ -2442,9 +2797,9 @@ func _input(event):
 		get_viewport().set_input_as_handled()
 		return
 
-	# Tecla Z: abre la consola, pero solo si el dispositivo real es un computador (PC, Mac o Linux).
-	# No depende de la opción PC/TELÉFONO elegida en el menú.
-	if OS.has_feature("pc") and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_Z:
+	# Tecla Z: abre la consola, pero solo si el dispositivo real es un computador (PC, Mac o Linux)
+	# y el nombre de usuario es el del dueño. No depende de la opción PC/TELÉFONO elegida en el menú.
+	if OS.has_feature("pc") and tiene_consola() and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_Z:
 		abrir_consola()
 		get_viewport().set_input_as_handled()  # que la "z" no se escriba en el cuadro
 		return
@@ -2518,28 +2873,28 @@ func _input(event):
 	centro.add_child(caja)
 
 	var titulo = Label.new()
-	titulo.text = "PAUSED"
+	titulo.text = t("paused")
 	titulo.add_theme_font_size_override("font_size", 64)
 	titulo.modulate = Color(0, 0.6, 1)
 	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	caja.add_child(titulo)
 
 	var seguir = Button.new()
-	seguir.text = "RESUME"
+	seguir.text = t("resume")
 	seguir.custom_minimum_size = Vector2(320, 80)
 	seguir.add_theme_font_size_override("font_size", 40)
 	seguir.pressed.connect(cerrar_pausa)
 	caja.add_child(seguir)
 
 	var salir = Button.new()
-	salir.text = "EXIT"
+	salir.text = t("exit_game")
 	salir.custom_minimum_size = Vector2(320, 80)
 	salir.add_theme_font_size_override("font_size", 40)
 	salir.pressed.connect(_on_salir_de_partida)
 	caja.add_child(salir)
 
 	var aviso = Label.new()
-	aviso.text = "Your progress is saved when you exit"
+	aviso.text = t("pause_note")
 	aviso.add_theme_font_size_override("font_size", 20)
 	aviso.modulate = Color(0.6, 0.6, 0.6)
 	aviso.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -2593,7 +2948,7 @@ func cargar_partida():
 	dano_en_rojos = archivo.get_value("partida", "dano_rojos", false)
 	dano_en_rojos2 = archivo.get_value("partida", "dano_rojos2", false)
 	corazones_visuales[3].visible = tiene_dorado
-	texto_nivel.text = "NIVEL: " + str(nivel_actual)
+	texto_nivel.text = t("level") + ": " + str(nivel_actual)
 	actualizar_corazones()
 
 
@@ -2610,6 +2965,9 @@ func _notification(what):
 # ==========================================
 # Comando "DeBug": activa/desactiva atravesar paredes y fuego sin recibir daño.
 func abrir_consola():
+	# Solo el dueño tiene consola
+	if not tiene_consola():
+		return
 	# No se abre en los menús ni en la pantalla final (el juego está en pausa) ni si ya está abierta
 	if get_tree().paused or consola_capa != null:
 		return
@@ -2634,14 +2992,14 @@ func abrir_consola():
 	centro.add_child(caja)
 
 	var titulo = Label.new()
-	titulo.text = "CONSOLE"
+	titulo.text = t("console")
 	titulo.add_theme_font_size_override("font_size", 40)
 	titulo.modulate = Color(0, 0.6, 1)
 	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	caja.add_child(titulo)
 
 	var linea = LineEdit.new()
-	linea.placeholder_text = "Type a command..."
+	linea.placeholder_text = t("console_hint")
 	linea.custom_minimum_size = Vector2(420, 56)
 	linea.add_theme_font_size_override("font_size", 28)
 	linea.text_submitted.connect(_on_comando)
@@ -2655,7 +3013,7 @@ func abrir_consola():
 	caja.add_child(consola_aviso)
 
 	var cerrar = Button.new()
-	cerrar.text = "CLOSE"
+	cerrar.text = t("close")
 	cerrar.custom_minimum_size = Vector2(200, 50)
 	cerrar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	cerrar.add_theme_font_size_override("font_size", 26)
@@ -2694,21 +3052,21 @@ func _on_comando(texto: String):
 		if numero.is_valid_int() and int(numero) >= 1 and int(numero) <= nivel_final:
 			teletransportar_a_nivel(int(numero))
 		else:
-			consola_aviso.text = "Unknown command (type a level 1-%d)" % nivel_final
+			consola_aviso.text = t("unknown_cmd") % nivel_final
 
 
 # Salta directamente a un nivel (solo desde la consola)
 func teletransportar_a_nivel(nivel: int):
 	cerrar_consola()
 	nivel_actual = nivel
-	texto_nivel.text = "NIVEL: " + str(nivel_actual)
+	texto_nivel.text = t("level") + ": " + str(nivel_actual)
 	# Saltarte el nivel 11 cuenta como no haberlo jugado: no se puede ganar Hitbox master así
 	if nivel_actual > nivel_lento_desde and nivel_actual <= nivel_lento_hasta:
 		dano_en_rojos = true
 	if nivel_actual > nivel_memoria and nivel_actual <= nivel_lento2_hasta:
 		dano_en_rojos2 = true  # lo mismo para Hitbox master II (te saltaste el nivel 21)
 	generar_mapa_procedural.call_deferred()
-	mostrar_mensaje.call_deferred("TP: LEVEL %d" % nivel, Color(0.4, 0.8, 1), 430)
+	mostrar_mensaje.call_deferred(t("tp_msg") % nivel, Color(0.4, 0.8, 1), 430)
 
 
 # Con debug activo el jugador ignora las paredes y los bloques negros
@@ -2795,9 +3153,9 @@ func _on_dorado_tocado(body, area):
 	guardar_logros()
 
 	if primera_vez:
-		mostrar_mensaje("GOLDEN HEART!  ACHIEVEMENT: Gold", Color(1, 0.84, 0), 250)
+		mostrar_mensaje(t("gold_heart_ach"), Color(1, 0.84, 0), 250)
 	else:
-		mostrar_mensaje("GOLDEN HEART!", Color(1, 0.84, 0), 400)
+		mostrar_mensaje(t("gold_heart"), Color(1, 0.84, 0), 400)
 
 
 func colocar_bloque_rojo(x, y):
@@ -2905,7 +3263,7 @@ func _on_linterna_tomada(body, area):
 		oscuridad.color = Color(1, 1, 1)
 		texto_memoria.visible = true
 	else:
-		mostrar_mensaje("¡LINTERNA ENCONTRADA!", Color(1, 1, 0.6), 340)
+		mostrar_mensaje(t("lantern_found"), Color(1, 1, 0.6), 340)
 
 
 func crear_bloque_negro(x, y):
@@ -2957,15 +3315,16 @@ func _on_puerta_tocada(body):
 	if body == jugador:
 		# En los niveles oscuros la puerta solo sirve con la linterna
 		if nivel_actual >= nivel_oscuridad and nivel_actual < nivel_slime and not tiene_linterna:
-			mostrar_mensaje("NECESITAS LA LINTERNA", Color(1, 0.3, 0.3), 330)
+			mostrar_mensaje(t("need_lantern"), Color(1, 0.3, 0.3), 330)
 			return
-		# En el nivel 39 la puerta no funciona hasta esquivar cinco balas con dash.
-		if nivel_actual == 39 and tutorial_dash_esquivadas < 5:
-			mostrar_mensaje("ESQUIVA 5 BALAS CON DASH: %d/5" % tutorial_dash_esquivadas, Color(1, 0.3, 0.3), 260)
+		# En el nivel 39 la puerta no funciona hasta completar el tutorial del dash
+		# (el contador solo está en el texto del tutorial, aquí no hay otro número)
+		if nivel_actual == 39 and tutorial_dash_activo:
+			mostrar_mensaje(t("dash_first"), Color(1, 0.3, 0.3), 330)
 			return
 		# El slime gigante cierra la puerta mientras siga vivo
 		if nivel_actual == nivel_jefe and jefe_vivo:
-			mostrar_mensaje("KILL THE BIG SLIME!", Color(1, 0.3, 0.3), 300)
+			mostrar_mensaje(t("kill_boss"), Color(1, 0.3, 0.3), 300)
 			return
 		# La puerta del último nivel termina la Alpha
 		if nivel_actual >= nivel_final:
@@ -2982,14 +3341,14 @@ func _on_puerta_tocada(body):
 			logro_hitbox2 = true
 			guardar_logros()
 		nivel_actual += 1
-		texto_nivel.text = "NIVEL: " + str(nivel_actual)
+		texto_nivel.text = t("level") + ": " + str(nivel_actual)
 		# Diferido para no modificar la física dentro de la señal
 		generar_mapa_procedural.call_deferred()
 		if gana_hitbox:
 			# Se muestra después de generar el nivel (que borra los carteles)
-			mostrar_mensaje.call_deferred("ACHIEVEMENT: Hitbox master", Color(1, 0.84, 0), 280)
+			mostrar_mensaje.call_deferred(t("ach_hitbox_msg"), Color(1, 0.84, 0), 280)
 		elif gana_hitbox2:
-			mostrar_mensaje.call_deferred("ACHIEVEMENT: Hitbox master II", Color(1, 0.84, 0), 250)
+			mostrar_mensaje.call_deferred(t("ach_hitbox2_msg"), Color(1, 0.84, 0), 250)
 
 
 # ==========================================
@@ -3007,8 +3366,12 @@ func cargar_logros():
 		logro_hitbox2 = archivo.get_value("logros", "hitbox2", false)
 		logro_door = archivo.get_value("logros", "door", false)
 		logro_slimekiller = archivo.get_value("logros", "slimekiller", false)
+		tutorial_dash_completo = archivo.get_value("logros", "tutorial_dash", false)
 		nombre_bloqueado = archivo.get_value("perfil", "bloqueado", false)
 		nombre_usuario = str(archivo.get_value("perfil", "nombre", "")).left(10)
+		idioma = str(archivo.get_value("perfil", "idioma", idioma))
+		if not IDIOMAS.has(idioma):
+			idioma = "en"
 		mods_instalados = archivo.get_value("mods", "instalados", ["base"])
 		mod_activo = archivo.get_value("mods", "activo", "base")
 		# Seguridad: el mod activo siempre debe estar instalado
@@ -3016,6 +3379,11 @@ func cargar_logros():
 			mods_instalados.append("base")
 		if not mods_instalados.has(mod_activo):
 			mod_activo = "base"
+		# Un mod bloqueado no puede estar instalado ni activo (ILS exige matar al slime gigante)
+		if not mod_desbloqueado("ils"):
+			mods_instalados.erase("ils")
+			if mod_activo == "ils":
+				mod_activo = "base"
 
 
 func guardar_logros():
@@ -3027,8 +3395,10 @@ func guardar_logros():
 	archivo.set_value("logros", "hitbox2", logro_hitbox2)
 	archivo.set_value("logros", "door", logro_door)
 	archivo.set_value("logros", "slimekiller", logro_slimekiller)
+	archivo.set_value("logros", "tutorial_dash", tutorial_dash_completo)
 	archivo.set_value("perfil", "bloqueado", nombre_bloqueado)
 	archivo.set_value("perfil", "nombre", nombre_usuario)
+	archivo.set_value("perfil", "idioma", idioma)
 	archivo.set_value("mods", "instalados", mods_instalados)
 	archivo.set_value("mods", "activo", mod_activo)
 	archivo.save(ARCHIVO_LOGROS)
@@ -3072,7 +3442,7 @@ func terminar_alpha():
 	caja.add_child(puerta_deco)
 
 	var titulo = Label.new()
-	titulo.text = "YOU FINISHED THE ALPHA!"
+	titulo.text = t("end_title")
 	titulo.add_theme_font_size_override("font_size", 64)
 	titulo.modulate = Color(0, 0.6, 1)
 	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -3081,21 +3451,21 @@ func terminar_alpha():
 	# El logro solo se muestra la primera vez; después queda solo el título y el botón MENU
 	if primera_vez:
 		var aviso = Label.new()
-		aviso.text = "ACHIEVEMENT UNLOCKED!"
+		aviso.text = t("ach_unlocked")
 		aviso.add_theme_font_size_override("font_size", 26)
 		aviso.modulate = Color(0.6, 0.6, 0.6)
 		aviso.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		caja.add_child(aviso)
 
 		var nombre_logro = Label.new()
-		nombre_logro.text = "¿End?"
+		nombre_logro.text = t("ach_end_n")
 		nombre_logro.add_theme_font_size_override("font_size", 52)
 		nombre_logro.modulate = Color(1, 0.84, 0)
 		nombre_logro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		caja.add_child(nombre_logro)
 
 	var boton_menu = Button.new()
-	boton_menu.text = "MENU"
+	boton_menu.text = t("menu")
 	boton_menu.custom_minimum_size = Vector2(280, 80)
 	boton_menu.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	boton_menu.add_theme_font_size_override("font_size", 40)
