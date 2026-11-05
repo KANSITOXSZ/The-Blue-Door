@@ -6,11 +6,12 @@ var plantilla_pared = preload("res://pared.tscn")
 # CONFIGURACIÓN Y VARIABLES DEL JUEGO
 # ==========================================
 var nivel_actual = 1
-var nivel_final = 40          # Al terminar este nivel se acaba la Alpha
+var nivel_final = 45          # Al terminar este nivel se acaba la Alpha (3.7.4: ahora son 45 niveles)
 var nivel_armas = 36          # Desde este nivel tienes la pistola (niveles 36 a 40)
 var nivel_dash = 38           # Desde este nivel tienes el dash
 var nivel_jefe = 40           # Nivel del slime gigante
 var nivel_slime = 26          # Niveles 26 a 35: slimes y bloques fantasma
+var nivel_slime2 = 41         # Niveles 41 a 45 (NUEVOS): slimes de 1 solo uso + oscuridad + fuego
 var nivel_fuego = 31          # Desde este nivel hay bloques de fuego en el camino del disparo
 var nivel_corazones = 11      # Desde este nivel se activan corazones y bloques rojos
 var nivel_oscuridad = 16      # Desde este nivel todo está oscuro y hace falta la linterna
@@ -97,6 +98,22 @@ var impulsando = false           # true mientras sales disparado
 var texto_slime: Label           # contador sobre el personaje
 var texto_tutorial: Label        # mini tutorial del nivel 26
 
+# Romper paredes (solo niveles 41 a 45) y logro "Rompe piedras"
+# Los slimes de estos niveles son de 1 solo uso. Si fallas, te acercas al muro de tu sala
+# y te echas hacia atrás y hacia adelante 3 veces para romper un bloque.
+const PIEDRAS_PARA_LOGRO = 20
+var piedras_rotas = 0            # total acumulado entre niveles y partidas (se guarda en el dispositivo)
+var logro_piedras = false        # logro "Rompe piedras": romper 20 bloques
+var golpes_para_romper = 3
+var puertas_nivel: Array = []    # columnas de los muros del nivel de slime actual
+var slimes_usados_col = {}       # columnas de los slimes que ya se gastaron
+var pared_golpeada: Node = null
+var golpes_pared = 0
+var golpe_listo = true           # true cuando ya retrocediste y puedes dar otro golpe
+var empujando_pared = false
+var dir_golpe = Vector2.ZERO
+var tiempo_golpe = 0.0
+
 # Pistola, dash y jefe (niveles 36 a 40)
 var logro_slimekiller = false    # logro "Slime killer": matar al slime gigante del nivel 40
 var tiene_arma = false
@@ -179,11 +196,11 @@ var botones_solo_en_movil = false
 var ultimo_camino: Array = []
 
 # ==========================================
-# IDIOMAS (Español / English)
+# IDIOMAS (Español / English / Русский)
 # ==========================================
 # Todos los textos del juego salen de esta tabla: t("clave") devuelve el texto en el idioma elegido.
 # El idioma se elige con el globo de texto (arriba a la derecha del menú) y queda guardado en el dispositivo.
-# La primera vez usa el idioma del sistema (español si el dispositivo está en español; si no, inglés).
+# La primera vez usa el idioma del sistema (español o ruso si el dispositivo está en ese idioma; si no, inglés).
 # Dueño del juego: escribir CLAVE_DUENO como nombre de usuario lo cambia a NOMBRE_DUENO,
 # y solo ese nombre tiene consola. Entrar 10 veces seguidas a Mods desbloquea el cambio de nombre.
 const CLAVE_DUENO = "jrrz3"
@@ -192,9 +209,9 @@ const ENTRADAS_PARA_CAMBIAR_NOMBRE = 10
 var entradas_mods_seguidas = 0
 var aviso_nombre_pendiente = false
 
-const IDIOMAS = ["es", "en"]
-const NOMBRES_IDIOMA = {"es": "Español", "en": "English"}
-var idioma = "es" if OS.get_locale_language() == "es" else "en"
+const IDIOMAS = ["es", "en", "ru"]
+const NOMBRES_IDIOMA = {"es": "Español", "en": "English", "ru": "Русский"}
+var idioma = "es" if OS.get_locale_language() == "es" else ("ru" if OS.get_locale_language() == "ru" else "en")
 var boton_idioma: Button
 var panel_idioma: PanelContainer
 var botones_idioma = {}
@@ -248,6 +265,13 @@ const TEXTOS = {
 		"ach_door_d": "Click the door in the menu",
 		"ach_slime_n": "Slime killer",
 		"ach_slime_d": "Kill the big slime in level 40",
+		"ach_piedras_n": "Rock breaker",
+		"ach_piedras_d": "Break 20 blocks (adds up across levels)",
+		"ach_piedras_msg": "ACHIEVEMENT: Rock breaker",
+		"tut_new": "One-use slime. Missed? Bump a wall back and forth 3 times",
+		"multiplayer": "MULTIPLAYER",
+		"nothing_here": "Nothing here yet",
+		"all_ach": "ALL ACHIEVEMENTS UNLOCKED",
 		"which_device": "What are you playing on?",
 		"phone": "PHONE",
 		"load_save": "Load save file?",
@@ -336,6 +360,13 @@ const TEXTOS = {
 		"ach_door_d": "Haz clic en la puerta del menú",
 		"ach_slime_n": "Asesino de slimes",
 		"ach_slime_d": "Mata al slime gigante en el nivel 40",
+		"ach_piedras_n": "Rompe piedras",
+		"ach_piedras_d": "Rompe 20 bloques (se suma entre niveles)",
+		"ach_piedras_msg": "LOGRO: Rompe piedras",
+		"tut_new": "Slime de 1 uso. ¿Fallaste? Ve y vuelve contra una pared 3 veces",
+		"multiplayer": "MULTIJUGADOR",
+		"nothing_here": "Nada aquí aún",
+		"all_ach": "TODOS LOS LOGROS DESBLOQUEADOS",
 		"which_device": "¿En qué juegas?",
 		"phone": "TELÉFONO",
 		"load_save": "¿Cargar partida guardada?",
@@ -376,6 +407,101 @@ const TEXTOS = {
 		"ach_unlocked": "¡LOGRO DESBLOQUEADO!",
 		"menu": "MENÚ",
 	},
+	"ru": {
+		"level": "УРОВЕНЬ",
+		"warning": "ВНИМАНИЕ",
+		"big_slime": "БОЛЬШОЙ СЛАЙМ",
+		"username": "Имя пользователя",
+		"confirm_name": "Подтвердить имя (потом изменить нельзя)",
+		"language": "Язык",
+		"achievements": "ДОСТИЖЕНИЯ",
+		"play": "ИГРАТЬ",
+		"mods": "МОДЫ",
+		"exit_game": "ВЫХОД",
+		"back": "НАЗАД",
+		"unlock_door": "ДОСТИЖЕНИЕ ПОЛУЧЕНО: Дверь",
+		"unlock_modder": "ДОСТИЖЕНИЕ ПОЛУЧЕНО: Моддер",
+		"name_unlocked": "ИМЯ РАЗБЛОКИРОВАНО: теперь его можно изменить",
+		"mods_title": "МОДЫ  %d/2",
+		"achievements_title": "ДОСТИЖЕНИЯ  %d/2",
+		"mod_locked_desc": "Убей большого слайма, чтобы разблокировать этот мод",
+		"mod_locked_btn": "ЗАКРЫТО",
+		"mod_active": "АКТИВЕН",
+		"mod_use": "ВЫБРАТЬ",
+		"mod_install": "УСТАНОВИТЬ",
+		"mod_base_n": "Базовая",
+		"mod_base_d": "Базовая игра без модов",
+		"mod_ilp_n": "Люблю розовый",
+		"mod_ilp_d": "Белые блоки становятся розовыми :3, красные — фиолетовыми >:3, а слаймы — голубыми",
+		"mod_ily_n": "Люблю жёлтый",
+		"mod_ily_d": "Белые блоки становятся жёлтыми, красные — оранжевыми, а слаймы — лаймовыми",
+		"mod_ilg_n": "Люблю зелёный",
+		"mod_ilg_d": "Белые блоки становятся тёмно-зелёными, красные — светло-зелёными, а слаймы — бирюзовыми",
+		"mod_ilb_n": "Люблю синий",
+		"mod_ilb_d": "Белые блоки становятся очень тёмно-синими, красные — тёмно-голубыми, а слаймы — фиолетовыми",
+		"mod_ils_n": "ЛЮБЛЮ СЛАЙМОВ",
+		"mod_ils_d": "Белые блоки используют модель зелёного слайма, красные блоки и выстрелы — модели красного слайма",
+		"ach_end_n": "Конец?",
+		"ach_end_d": "Пройди Альфу",
+		"ach_gold_n": "Золото",
+		"ach_gold_d": "Золотое сердце!",
+		"ach_modder_n": "Моддер",
+		"ach_modder_d": "Скачай мод",
+		"ach_hitbox_n": "Мастер хитбоксов",
+		"ach_hitbox_d": "Пройди уровни 11-15, не получив урона",
+		"ach_hitbox2_n": "Мастер хитбоксов II",
+		"ach_hitbox2_d": "Пройди уровни 21-25, не получив урона",
+		"ach_door_n": "Дверь",
+		"ach_door_d": "Нажми на дверь в меню",
+		"ach_slime_n": "Убийца слаймов",
+		"ach_slime_d": "Убей большого слайма на уровне 40",
+		"ach_piedras_n": "Крушитель камней",
+		"ach_piedras_d": "Разрушь 20 блоков (суммируется по уровням)",
+		"ach_piedras_msg": "ДОСТИЖЕНИЕ: Крушитель камней",
+		"tut_new": "Слайм одноразовый. Промах? Ударься о стену 3 раза туда-сюда",
+		"multiplayer": "МУЛЬТИПЛЕЕР",
+		"nothing_here": "Здесь пока ничего нет",
+		"all_ach": "ВСЕ ДОСТИЖЕНИЯ ПОЛУЧЕНЫ",
+		"which_device": "На чём играешь?",
+		"phone": "ТЕЛЕФОН",
+		"load_save": "Загрузить сохранение?",
+		"saved_level": "Сохранение: уровень %d",
+		"yes": "ДА",
+		"no": "НЕТ",
+		"memorize": "ЗАПОМНИ!  %.1f",
+		"invincible": "НЕУЯЗВИМОСТЬ: %.1f",
+		"click": "КЛИК",
+		"gun_msg": "ПИСТОЛЕТ!  %s = стрелять",
+		"dash_msg": "РЫВОК!  %s = рывок",
+		"tut_slime": "Толкай СЛАЙМА: 1, 2 или 3 с = больше силы",
+		"tut_fire": "Огонь! Держи дольше, чтобы перелететь",
+		"tut_ghost": "Призрачные блоки проходятся только в полёте!",
+		"dash_counter": "РЫВОК против пуль: уклонений %d/%d",
+		"dash_hit": "ИСПОЛЬЗУЙ РЫВОК, ЧТОБЫ УКЛОНИТЬСЯ!",
+		"dash_done": "Обучение пройдено! Иди к двери.",
+		"dash_first": "СНАЧАЛА УКЛОНИСЬ РЫВКОМ",
+		"ach_slime_msg": "ДОСТИЖЕНИЕ: Убийца слаймов",
+		"mod_unlocked": "МОД РАЗБЛОКИРОВАН: ЛЮБЛЮ СЛАЙМОВ",
+		"boss_defeated": "БОЛЬШОЙ СЛАЙМ ПОБЕЖДЁН!",
+		"kill_boss": "УБЕЙ БОЛЬШОГО СЛАЙМА!",
+		"gold_heart_ach": "ЗОЛОТОЕ СЕРДЦЕ!  ДОСТИЖЕНИЕ: Золото",
+		"gold_heart": "ЗОЛОТОЕ СЕРДЦЕ!",
+		"lantern_found": "ФОНАРЬ НАЙДЕН!",
+		"need_lantern": "НУЖЕН ФОНАРЬ",
+		"ach_hitbox_msg": "ДОСТИЖЕНИЕ: Мастер хитбоксов",
+		"ach_hitbox2_msg": "ДОСТИЖЕНИЕ: Мастер хитбоксов II",
+		"paused": "ПАУЗА",
+		"resume": "ПРОДОЛЖИТЬ",
+		"pause_note": "Прогресс сохраняется при выходе",
+		"console": "КОНСОЛЬ",
+		"console_hint": "Введи команду...",
+		"close": "ЗАКРЫТЬ",
+		"unknown_cmd": "Неизвестная команда (введи уровень 1-%d)",
+		"tp_msg": "ТП: УРОВЕНЬ %d",
+		"end_title": "ТЫ ПРОШЁЛ АЛЬФУ!",
+		"ach_unlocked": "ДОСТИЖЕНИЕ ПОЛУЧЕНО!",
+		"menu": "МЕНЮ",
+	},
 }
 
 
@@ -387,7 +513,17 @@ func t(clave: String) -> String:
 	return TEXTOS["en"].get(clave, clave)
 
 
-# Botón con un globo de texto (arriba a la derecha). Al pulsarlo se despliegan los dos idiomas.
+# true en los niveles con oscuridad y linterna: 16 a 25 y los nuevos (41 en adelante)
+func nivel_es_oscuro() -> bool:
+	return (nivel_actual >= nivel_oscuridad and nivel_actual < nivel_slime) or nivel_actual >= nivel_slime2
+
+
+# true solo en los niveles 21 a 25 (al tomar la linterna se ve el mapa unos segundos)
+func en_nivel_memoria() -> bool:
+	return nivel_actual >= nivel_memoria and nivel_actual < nivel_slime
+
+
+# Botón con un globo de texto (arriba a la derecha). Al pulsarlo se despliegan los idiomas.
 func crear_selector_idioma():
 	boton_idioma = Button.new()
 	boton_idioma.custom_minimum_size = Vector2(64, 50)
@@ -720,7 +856,7 @@ func mostrar_pantalla_principal():
 	menu_caja.add_child(puerta_deco)
 
 	crear_etiqueta_menu("THE BLUE DOOR", 72, Color(0, 0.6, 1))
-	crear_etiqueta_menu("ALPHA 3.2.1", 24, Color(0.6, 0.6, 0.6))
+	crear_etiqueta_menu("ALPHA 3.7.4", 24, Color(0.6, 0.6, 0.6))
 
 	var fila = HBoxContainer.new()
 	fila.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -736,7 +872,12 @@ func mostrar_pantalla_principal():
 	var boton_mods = crear_boton_en(fila, t("mods"), 220, 70, 30)
 	boton_mods.pressed.connect(_on_mods_desde_menu)
 
-	# SALIR: debajo de JUGAR, un poco más pequeño
+	# MULTIJUGADOR: debajo de JUGAR (todavía no tiene nada)
+	var boton_multi = crear_boton_en(menu_caja, t("multiplayer"), 280, 60, 28)
+	boton_multi.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	boton_multi.pressed.connect(_on_multijugador_pulsado)
+
+	# SALIR: debajo de MULTIJUGADOR, un poco más pequeño
 	var boton_salir = crear_boton_en(menu_caja, t("exit_game"), 200, 60, 28)
 	boton_salir.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	boton_salir.pressed.connect(_on_salir_pulsado)
@@ -1004,11 +1145,11 @@ func _on_logros_pulsado(pagina = 0):
 		# Hitbox master tiene una flecha: muestra su "raíz" de logros (Hitbox master II)
 		mostrar_logro(logro_hitbox, t("ach_hitbox_n"), t("ach_hitbox_d"), _on_raiz_hitbox_pulsada)
 	else:
-		# Página 2: logros que todavía no existen en esta versión (siguen sin descubrir)
+		# Página 2: Door, Slime killer, Rompe piedras y un espacio todavía sin descubrir
 		mostrar_logro(logro_door, t("ach_door_n"), t("ach_door_d"))
 		mostrar_logro(logro_slimekiller, t("ach_slime_n"), t("ach_slime_d"))
-		for i in range(2):
-			mostrar_logro(false, "", "")
+		mostrar_logro(logro_piedras, t("ach_piedras_n"), t("ach_piedras_d"))
+		mostrar_logro(false, "", "")
 
 	# Fila inferior: [flecha izquierda]  VOLVER  [flecha derecha]
 	var fila = HBoxContainer.new()
@@ -1118,7 +1259,30 @@ func _on_jugar_pulsado():
 	var boton_telefono = crear_boton_menu(t("phone"))
 	boton_telefono.pressed.connect(_elegir_dispositivo.bind("telefono"))
 
+	# Flecha para volver al menú principal
+	crear_flecha_volver(mostrar_pantalla_principal)
+
 	boton_pc.grab_focus.call_deferred()
+
+
+# Flecha para devolverse a la pantalla anterior (centrada, abajo)
+func crear_flecha_volver(destino: Callable) -> Button:
+	var fila = HBoxContainer.new()
+	fila.alignment = BoxContainer.ALIGNMENT_CENTER
+	menu_caja.add_child(fila)
+	var flecha = crear_boton_flecha(fila, false)
+	flecha.pressed.connect(destino)
+	return flecha
+
+
+# MULTIJUGADOR: por ahora solo dice que no hay nada
+func _on_multijugador_pulsado():
+	entradas_mods_seguidas = 0  # entrar a otra pantalla rompe la racha de entradas a Mods
+	limpiar_menu()
+	crear_etiqueta_menu(t("multiplayer"), 56, Color(0, 0.6, 1))
+	crear_etiqueta_menu(t("nothing_here"), 36, Color(0.6, 0.6, 0.6))
+	var volver = crear_flecha_volver(_volver_de_mods)
+	volver.grab_focus.call_deferred()
 
 
 func crear_boton_menu(texto: String) -> Button:
@@ -1135,8 +1299,8 @@ func crear_boton_menu(texto: String) -> Button:
 func actualizar_velocidad():
 	var tramo_lento_1 = nivel_actual >= nivel_lento_desde and nivel_actual <= nivel_lento_hasta
 	var tramo_lento_2 = nivel_actual >= nivel_lento2_desde and nivel_actual <= nivel_lento2_hasta
-	# En la opción de teléfono también va más lento en los niveles con fuego (31 a 35)
-	var fuego_en_telefono = dispositivo_actual == "telefono" and nivel_actual >= nivel_fuego and nivel_actual < nivel_armas
+	# En la opción de teléfono también va más lento en los niveles con fuego (31 a 35 y los nuevos 41 a 45)
+	var fuego_en_telefono = dispositivo_actual == "telefono" and nivel_actual >= nivel_fuego and (nivel_actual < nivel_armas or nivel_actual >= nivel_slime2)
 	if tramo_lento_1 or tramo_lento_2 or fuego_en_telefono:
 		velocidad_jugador = velocidad_lenta
 	else:
@@ -1175,6 +1339,7 @@ func preguntar_cargar_partida():
 	si.pressed.connect(_on_cargar_si)
 	var no = crear_boton_menu(t("no"))
 	no.pressed.connect(iniciar_juego)
+	crear_flecha_volver(_on_jugar_pulsado)
 	si.grab_focus.call_deferred()
 
 
@@ -1233,9 +1398,13 @@ func actualizar_corazones():
 
 
 func _physics_process(delta):
-	# Niveles 26 a 35: bloques slime
+	# Niveles 26 a 35 (y los nuevos 41 a 45): bloques slime
 	if nivel_actual >= nivel_slime:
 		procesar_slime(delta)
+
+	# Niveles nuevos 41 a 45: romper paredes cuando el slime ya se gastó
+	if nivel_actual >= nivel_slime2:
+		procesar_romper(delta)
 
 	# Niveles 36 a 40: pistola, dash y jefe
 	if nivel_actual >= nivel_armas:
@@ -1295,7 +1464,9 @@ func recibir_dano():
 		# Sin corazones: vuelves al nivel 11 (o al 21 si estabas en los niveles de memoria)
 		# con corazones nuevos y un mapa nuevo.
 		# "reiniciando" bloquea el daño hasta que el jugador reaparezca.
-		if nivel_actual >= nivel_armas:
+		if nivel_actual >= nivel_slime2:
+			nivel_actual = nivel_slime2  # los niveles nuevos (41 a 45) reinician en el 41
+		elif nivel_actual >= nivel_armas:
 			nivel_actual = nivel_armas
 		elif nivel_actual >= nivel_slime:
 			nivel_actual = nivel_slime
@@ -1403,8 +1574,9 @@ func generar_mapa_procedural():
 		tiempo_invulnerable = 3.0
 		texto_invencible.visible = true
 
-	# Los niveles 26 a 35 (slime) tienen luz normal: no hay linterna
-	var es_oscuro = nivel_actual >= nivel_oscuridad and nivel_actual < nivel_slime
+	# Los niveles 26 a 35 (slime) tienen luz normal: no hay linterna.
+	# Los niveles nuevos 41 a 45 vuelven a ser oscuros (slime + oscuridad + fuego).
+	var es_oscuro = nivel_es_oscuro()
 	var es_memoria = nivel_actual >= nivel_memoria
 
 	# Al empezar el nivel 11 (o reaparecer en él) empieza el intento de Hitbox master
@@ -1414,8 +1586,8 @@ func generar_mapa_procedural():
 	if nivel_actual == nivel_memoria:
 		dano_en_rojos2 = false
 
-	# Al entrar a los niveles de memoria (21) y de slime (26) los corazones se reinician
-	if nivel_actual == nivel_memoria or nivel_actual == nivel_slime or nivel_actual == nivel_armas:
+	# Al entrar a los niveles de memoria (21), de slime (26), de armas (36) y a los nuevos (41) los corazones se reinician
+	if nivel_actual == nivel_memoria or nivel_actual == nivel_slime or nivel_actual == nivel_armas or nivel_actual == nivel_slime2:
 		corazones = corazones_max
 		actualizar_corazones()
 
@@ -1437,6 +1609,13 @@ func generar_mapa_procedural():
 	tutorial_dash_activo = false
 	# (los niveles 36 a 39 usan el generador normal de bloques rojos; el 40 es el jefe)
 	if nivel_actual >= nivel_slime and nivel_actual < nivel_armas:
+		generar_nivel_slime()
+		terminar_generacion()
+		return
+	# NIVELES NUEVOS 41 A 45: slimes de 1 solo uso, oscuridad y fuego
+	if nivel_actual >= nivel_slime2:
+		# La puerta vuelve a su sitio (en el nivel 40 se movió a donde murió el jefe)
+		puerta.position = Vector2((columnas - 1) * tamaño_bloque, 5 * tamaño_bloque)
 		generar_nivel_slime()
 		terminar_generacion()
 		return
@@ -1632,17 +1811,20 @@ func terminar_generacion():
 
 
 # ==========================================
-# NIVELES 26 A 35: SLIME, BLOQUES FANTASMA, FUEGO Y TUTORIAL
+# NIVELES 26 A 35 Y NUEVOS 41 A 45: SLIME, BLOQUES FANTASMA, FUEGO Y TUTORIAL
 # ==========================================
 # Cada nivel es una fila de "salas" separadas por muros con un bloque fantasma.
 # El bloque fantasma solo se puede cruzar mientras sales disparado por un slime.
 # Cada sala tiene su slime pegado al muro de la izquierda, en la misma fila que el
 # bloque fantasma de su muro: empuja contra el slime y salta hacia él.
 # La fuerza del disparo depende de los segundos que cargues (1, 2 o 3).
+# NIVELES 41 A 45: además, cada slime sirve UNA sola vez (si fallas hay que romper el muro, ver procesar_romper)
+# y el nivel es oscuro: la linterna está cerca del inicio.
 func generar_nivel_slime():
 	# Tamaño de cada sala (celdas libres entre el slime y el muro).
 	# Se mezclan en orden aleatorio en cada intento, pero siempre hay camino de un slime al siguiente.
 	# Sala de 1 a 5 = basta 1 s de carga, de 7 a 9 = hacen falta 2 s, de 10 a 12 = hacen falta 3 s.
+	# (el último muro nunca puede pasar de la columna 16: suma + 2 * salas - 1 <= 16)
 	var planos_gaps = {
 		26: [9],
 		27: [6, 4],
@@ -1654,6 +1836,12 @@ func generar_nivel_slime():
 		33: [4, 7],
 		34: [9, 3],
 		35: [11, 2],
+		# Niveles nuevos (slimes de 1 uso + oscuridad + fuego)
+		41: [8, 3],
+		42: [6, 3, 2],
+		43: [10, 3],
+		44: [4, 2, 2, 1],
+		45: [8, 1, 2],
 	}
 	var gaps = planos_gaps.get(nivel_actual, [2, 1, 1, 1, 1]).duplicate()
 	if nivel_actual != nivel_slime:
@@ -1667,6 +1855,7 @@ func generar_nivel_slime():
 		puertas.append(w)
 		inicio_sala = w + 1
 	var n = puertas.size()
+	puertas_nivel = puertas.duplicate()  # para saber qué muros se pueden romper (niveles 41 a 45)
 
 	# Fila por la que se cruza cada muro (distinta a la del muro anterior)
 	var filas_paso = []
@@ -1691,7 +1880,7 @@ func generar_nivel_slime():
 		var col_slime = 0 if k == 0 else puertas[k - 1] + 1
 		crear_slime(col_slime, filas_paso[k])
 
-	# Bloques de fuego (niveles 31 a 35): ocupan la fila del disparo antes del bloque fantasma.
+	# Bloques de fuego (niveles 31 en adelante): ocupan la fila del disparo antes del bloque fantasma.
 	# Si te impulsas poco caes en el fuego; si te impulsas mucho pasas volando por encima.
 	if nivel_actual >= nivel_fuego:
 		for k in range(n):
@@ -1732,6 +1921,16 @@ func generar_nivel_slime():
 	elif nivel_actual == nivel_fuego:
 		texto_tutorial.text = t("tut_fire")
 		texto_tutorial.visible = true
+	elif nivel_actual == nivel_slime2:
+		# Primer nivel nuevo: avisa que el slime es de 1 uso y cómo romper el muro si fallas
+		texto_tutorial.position = Vector2(200, 85)
+		texto_tutorial.modulate = Color(1, 1, 0.5)
+		texto_tutorial.text = t("tut_new")
+		texto_tutorial.visible = true
+
+	# Niveles nuevos: la linterna está en la columna 1 (siempre antes del primer muro)
+	if nivel_actual >= nivel_slime2:
+		crear_linterna(Vector2i(1, 3))
 
 
 func agregar_modelo_slime(padre: Node, tam: Vector2, color_cuerpo: Color):
@@ -2300,7 +2499,9 @@ func _on_bala_area(area, bala):
 		area.queue_free()  # tu disparo apaga el fuego del jefe
 		bala.queue_free()
 	elif area.is_in_group("rojos"):
-		area.queue_free()  # los bloques rojos se destruyen con disparos
+		# En los niveles nuevos (41 a 45) el fuego del camino NO se destruye con disparos
+		if nivel_actual < nivel_slime2:
+			area.queue_free()  # los bloques rojos se destruyen con disparos
 		bala.queue_free()
 
 
@@ -2628,6 +2829,9 @@ func reiniciar_slime():
 	slime_actual = null
 	slime_tiempo = 0.0
 	impulsando = false
+	slimes_usados_col = {}   # los slimes gastados vuelven en el nivel nuevo
+	puertas_nivel = []
+	reiniciar_romper()
 	if texto_slime:
 		texto_slime.visible = false
 	if jugador:
@@ -2721,6 +2925,7 @@ func lanzar_jugador():
 	var fuerza = clampi(int(slime_tiempo), 1, 3)
 	var duracion = float(tiempos_impulso[fuerza - 1])
 	var centro = slime_actual.position + Vector2(tamaño_bloque / 2, tamaño_bloque / 2)
+	var usado = slime_actual  # para gastarlo después (solo niveles 41 a 45)
 	# Te alineamos con el slime para que el disparo pase justo por el bloque fantasma
 	if slime_dir.x != 0:
 		jugador.position.y = centro.y
@@ -2730,6 +2935,10 @@ func lanzar_jugador():
 	jugador.set("tiempo_impulso", duracion)
 	impulsando = true
 	cancelar_cuenta_slime()
+
+	# Niveles nuevos (41 a 45): el slime sirve una sola vez
+	if nivel_actual >= nivel_slime2:
+		consumir_slime(usado)
 
 	# Mientras vuelas atraviesas los bloques fantasma
 	for pasa in get_tree().get_nodes_in_group("pasas"):
@@ -2758,6 +2967,125 @@ func jugador_dentro_de_pasa() -> bool:
 		if caja_jugador.intersects(caja):
 			return true
 	return false
+
+
+# ---------- Slimes de 1 uso, romper paredes y logro "Rompe piedras" (niveles 41 a 45) ----------
+# El slime desaparece después de dispararte. Se anota su columna para saber que
+# el muro de esa sala ya se puede romper.
+func consumir_slime(s: Node):
+	if s == null or not is_instance_valid(s):
+		return
+	slimes_usados_col[int(round(s.position.x / tamaño_bloque))] = true
+	s.remove_from_group("slimes")
+	s.set_deferred("collision_layer", 0)
+	var tween = s.create_tween()
+	tween.tween_property(s, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(s.queue_free)
+
+
+# Un muro se puede romper solo si el slime de su sala ya se gastó (así no te saltas el reto)
+func pared_rompible(p: Node) -> bool:
+	var col = int(round(p.position.x / tamaño_bloque))
+	var k = puertas_nivel.find(col)
+	if k < 0:
+		return false
+	var col_slime = 0 if k == 0 else int(puertas_nivel[k - 1]) + 1
+	return slimes_usados_col.has(col_slime)
+
+
+func reiniciar_romper():
+	pared_golpeada = null
+	golpes_pared = 0
+	golpe_listo = true
+	empujando_pared = false
+	tiempo_golpe = 0.0
+
+
+# Empuja una pared, retrocede, vuelve a empujar... al 3.er golpe el bloque se rompe
+func procesar_romper(delta):
+	if jugador == null or impulsando or reiniciando or debug_activo:
+		return
+	tiempo_golpe += delta
+	var d = direccion_pulsada()
+	var candidatos = []
+	if d.x != 0:
+		candidatos.append(Vector2(signf(d.x), 0))
+	if d.y != 0:
+		candidatos.append(Vector2(0, signf(d.y)))
+
+	var pared: Node = null
+	var dir_pared = Vector2.ZERO
+	for c in candidatos:
+		for p in get_tree().get_nodes_in_group("paredes"):
+			if p.is_queued_for_deletion() or not pared_rompible(p):
+				continue
+			var rel = p.position + Vector2(tamaño_bloque / 2.0, tamaño_bloque / 2.0) - jugador.position
+			var toca = false
+			if c.x != 0:
+				toca = absf(rel.y) < 40 and absf(rel.x) <= 60 and signf(rel.x) == c.x
+			else:
+				toca = absf(rel.x) < 40 and absf(rel.y) <= 60 and signf(rel.y) == c.y
+			if toca:
+				pared = p
+				dir_pared = c
+				break
+		if pared != null:
+			break
+
+	if pared != null:
+		if not empujando_pared:  # se cuenta un golpe cada vez que vuelves a empujar
+			if pared != pared_golpeada:
+				pared_golpeada = pared
+				golpes_pared = 0
+				golpe_listo = true
+			if golpe_listo:
+				golpes_pared += 1
+				golpe_listo = false
+				tiempo_golpe = 0.0
+				pared.modulate = Color(1.8, 0.8, 0.8)
+				pared.create_tween().tween_property(pared, "modulate", Color(1, 1, 1), 0.15)
+				if golpes_pared >= golpes_para_romper:
+					romper_pared(pared)
+					reiniciar_romper()
+					return
+		empujando_pared = true
+		dir_golpe = dir_pared
+	else:
+		empujando_pared = false
+		if pared_golpeada != null:
+			# Hay que retroceder (ir en dirección contraria) entre golpe y golpe
+			if d != Vector2.ZERO and d.dot(dir_golpe) < 0:
+				golpe_listo = true
+			if tiempo_golpe > 2.5:
+				reiniciar_romper()
+
+
+func romper_pared(p: Node):
+	var pos = p.position
+	p.remove_from_group("paredes")
+	p.queue_free()
+	crear_polvo(pos)
+	piedras_rotas += 1
+	# Logro "Rompe piedras": 20 bloques en total (en un solo nivel o sumando varios)
+	if piedras_rotas >= PIEDRAS_PARA_LOGRO and not logro_piedras:
+		logro_piedras = true
+		mostrar_mensaje(t("ach_piedras_msg"), Color(1, 0.84, 0), 260)
+	guardar_logros()
+
+
+# Cuadritos que salen volando cuando se rompe un bloque
+func crear_polvo(pos: Vector2):
+	for i in range(6):
+		var f = ColorRect.new()
+		f.size = Vector2(12, 12)
+		f.color = Color(0.85, 0.85, 0.85)
+		f.position = pos + Vector2(randf_range(10, 40), randf_range(10, 40))
+		f.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(f)
+		var tw = f.create_tween().set_parallel(true)
+		tw.tween_property(f, "position", f.position + Vector2(randf_range(-40, 40), randf_range(-40, 40)), 0.35)
+		tw.tween_property(f, "modulate:a", 0.0, 0.35)
+		tw.chain().tween_callback(f.queue_free)
 
 
 # ==========================================
@@ -3046,6 +3374,8 @@ func _on_comando(texto: String):
 			mostrar_mensaje("DEBUG: ON", Color(0.3, 1, 0.3), 440)
 		else:
 			mostrar_mensaje("DEBUG: OFF", Color(1, 0.4, 0.4), 440)
+	elif texto.strip_edges().to_lower() == "sss":
+		desbloquear_todos_logros()
 	else:
 		# Un número (o "tp 12") te teletransporta a ese nivel
 		var numero = texto.strip_edges().to_lower().trim_prefix("tp").strip_edges()
@@ -3067,6 +3397,22 @@ func teletransportar_a_nivel(nivel: int):
 		dano_en_rojos2 = true  # lo mismo para Hitbox master II (te saltaste el nivel 21)
 	generar_mapa_procedural.call_deferred()
 	mostrar_mensaje.call_deferred(t("tp_msg") % nivel, Color(0.4, 0.8, 1), 430)
+
+
+# Comando "sss": desbloquea todos los logros
+func desbloquear_todos_logros():
+	logro_end = true
+	logro_gold = true
+	logro_modder = true
+	logro_hitbox = true
+	logro_hitbox2 = true
+	logro_door = true
+	logro_slimekiller = true
+	logro_piedras = true
+	piedras_rotas = maxi(piedras_rotas, PIEDRAS_PARA_LOGRO)
+	guardar_logros()
+	cerrar_consola()
+	mostrar_mensaje(t("all_ach"), Color(1, 0.84, 0), 220)
 
 
 # Con debug activo el jugador ignora las paredes y los bloques negros
@@ -3204,9 +3550,9 @@ func crear_textura_luz() -> GradientTexture2D:
 func actualizar_luz():
 	if luz_jugador == null:
 		return
-	luz_jugador.enabled = nivel_actual >= nivel_oscuridad and nivel_actual < nivel_slime
+	luz_jugador.enabled = nivel_es_oscuro()
 	# En los niveles de memoria (21 a 25) la luz siempre es pequeña: hay que recordar el mapa
-	if tiene_linterna and nivel_actual < nivel_memoria:
+	if tiene_linterna and not en_nivel_memoria():
 		luz_jugador.texture_scale = 1.1
 	else:
 		luz_jugador.texture_scale = 0.35
@@ -3257,7 +3603,7 @@ func _on_linterna_tomada(body, area):
 
 	actualizar_luz()
 
-	if nivel_actual >= nivel_memoria:
+	if en_nivel_memoria():
 		# Niveles 21 a 25: se ve todo el mapa durante unos segundos para memorizarlo
 		tiempo_revelado = tiempo_memoria
 		oscuridad.color = Color(1, 1, 1)
@@ -3314,7 +3660,7 @@ func crear_puerta_meta():
 func _on_puerta_tocada(body):
 	if body == jugador:
 		# En los niveles oscuros la puerta solo sirve con la linterna
-		if nivel_actual >= nivel_oscuridad and nivel_actual < nivel_slime and not tiene_linterna:
+		if nivel_es_oscuro() and not tiene_linterna:
 			mostrar_mensaje(t("need_lantern"), Color(1, 0.3, 0.3), 330)
 			return
 		# En el nivel 39 la puerta no funciona hasta completar el tutorial del dash
@@ -3366,6 +3712,8 @@ func cargar_logros():
 		logro_hitbox2 = archivo.get_value("logros", "hitbox2", false)
 		logro_door = archivo.get_value("logros", "door", false)
 		logro_slimekiller = archivo.get_value("logros", "slimekiller", false)
+		logro_piedras = archivo.get_value("logros", "piedras_logro", false)
+		piedras_rotas = int(archivo.get_value("logros", "piedras", 0))
 		tutorial_dash_completo = archivo.get_value("logros", "tutorial_dash", false)
 		nombre_bloqueado = archivo.get_value("perfil", "bloqueado", false)
 		nombre_usuario = str(archivo.get_value("perfil", "nombre", "")).left(10)
@@ -3395,6 +3743,8 @@ func guardar_logros():
 	archivo.set_value("logros", "hitbox2", logro_hitbox2)
 	archivo.set_value("logros", "door", logro_door)
 	archivo.set_value("logros", "slimekiller", logro_slimekiller)
+	archivo.set_value("logros", "piedras_logro", logro_piedras)
+	archivo.set_value("logros", "piedras", piedras_rotas)
 	archivo.set_value("logros", "tutorial_dash", tutorial_dash_completo)
 	archivo.set_value("perfil", "bloqueado", nombre_bloqueado)
 	archivo.set_value("perfil", "nombre", nombre_usuario)
