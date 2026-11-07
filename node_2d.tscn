@@ -9,3 +9,7 @@ script = ExtResource("1_epypp")
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1680144273]
 position = Vector2(500, 300)
 texture = ExtResource("1_0e48y")
+
+[node name="Sprite2D2" type="Sprite2D" parent="." unique_id=1832847945]
+position = Vector2(500, 300)
+texture = ExtResource("1_0e48y")

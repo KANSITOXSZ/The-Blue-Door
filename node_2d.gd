@@ -102,7 +102,9 @@ var texto_tutorial: Label        # mini tutorial del nivel 26
 # Los slimes de estos niveles son de 1 solo uso. Si fallas, te acercas al muro de tu sala
 # y te echas hacia atrás y hacia adelante 3 veces para romper un bloque.
 const PIEDRAS_PARA_LOGRO = 20
+const PIEDRAS_PARA_MINERO = 100   # logro "Minero": desbloquea el mod Minero (el pico)
 var piedras_rotas = 0            # total acumulado entre niveles y partidas (se guarda en el dispositivo)
+var logro_minero = false         # logro "Minero": romper 100 bloques en total (desbloquea el mod Minero)
 var logro_piedras = false        # logro "Rompe piedras": romper 20 bloques
 var golpes_para_romper = 3
 var puertas_nivel: Array = []    # columnas de los muros del nivel de slime actual
@@ -186,6 +188,11 @@ var lista_mods = [
 		"id": "ils", "letras": "ILS", "nombre": "I LOVE SLIME",
 		"desc": "White blocks use the green slime model, red blocks and shots use red slime models",
 		"fondo": Color(0.25, 0.85, 0.3), "texto": Color(0.05, 0.2, 0.05),
+	},
+	{
+		"id": "minero", "letras": "MIN", "nombre": "Miner",
+		"desc": "A pickaxe appears next to your character",
+		"fondo": Color(0.45, 0.3, 0.15), "texto": Color(0.95, 0.88, 0.7),
 	},
 ]
 
@@ -283,6 +290,14 @@ const TEXTOS = {
 		"mp_err_started": "The race already started",
 		"mp_err_banned": "You are banned from this room",
 		"mp_err_noroom": "Room not found",
+		"mod_minero_n": "Miner",
+		"mod_minero_d": "A pickaxe appears next to your character",
+		"mod_minero_lock": "Earn the Miner achievement to unlock this mod",
+		"ach_minero_n": "Miner",
+		"ach_minero_d": "Break 100 blocks in total",
+		"ach_minero_msg": "ACHIEVEMENT: Miner  (MOD UNLOCKED)",
+		"mp_cross": "Cross-play: PC and phone can play together",
+		"mp_wake": "Connecting to the server... it can take up to 1 minute",
 		"mp_kicked": "You were kicked from the room",
 		"mp_banned_msg": "You were banned from the room",
 		"mp_room_closed": "The room was closed",
@@ -422,6 +437,14 @@ const TEXTOS = {
 		"mp_err_started": "La carrera ya empezó",
 		"mp_err_banned": "Estás baneado de esta sala",
 		"mp_err_noroom": "Sala no encontrada",
+		"mod_minero_n": "Minero",
+		"mod_minero_d": "Aparece un pico al lado de tu personaje",
+		"mod_minero_lock": "Consigue el logro Minero para desbloquear este mod",
+		"ach_minero_n": "Minero",
+		"ach_minero_d": "Rompe 100 bloques en total",
+		"ach_minero_msg": "LOGRO: Minero  (MOD DESBLOQUEADO)",
+		"mp_cross": "Juego cruzado: PC y teléfono pueden jugar juntos",
+		"mp_wake": "Conectando con el servidor... puede tardar hasta 1 minuto",
 		"mp_kicked": "Te expulsaron de la sala",
 		"mp_banned_msg": "Te banearon de la sala",
 		"mp_room_closed": "La sala se cerró",
@@ -561,6 +584,14 @@ const TEXTOS = {
 		"mp_err_started": "Гонка уже началась",
 		"mp_err_banned": "Вы забанены в этой комнате",
 		"mp_err_noroom": "Комната не найдена",
+		"mod_minero_n": "Шахтёр",
+		"mod_minero_d": "Рядом с персонажем появляется кирка",
+		"mod_minero_lock": "Получи достижение «Шахтёр», чтобы открыть этот мод",
+		"ach_minero_n": "Шахтёр",
+		"ach_minero_d": "Разрушь 100 блоков суммарно",
+		"ach_minero_msg": "ДОСТИЖЕНИЕ: Шахтёр  (МОД ОТКРЫТ)",
+		"mp_cross": "Кросс-плей: ПК и телефон могут играть вместе",
+		"mp_wake": "Подключение к серверу... может занять до минуты",
 		"mp_kicked": "Вас выгнали из комнаты",
 		"mp_banned_msg": "Вас забанили в комнате",
 		"mp_room_closed": "Комната закрыта",
@@ -990,7 +1021,7 @@ func mostrar_pantalla_principal():
 	menu_caja.add_child(puerta_deco)
 
 	crear_etiqueta_menu("THE BLUE DOOR", 72, Color(0, 0.6, 1))
-	crear_etiqueta_menu("ALPHA 3.8.1", 24, Color(0.6, 0.6, 0.6))
+	crear_etiqueta_menu("ALPHA 3.9.1", 24, Color(0.6, 0.6, 0.6))
 
 	var fila = HBoxContainer.new()
 	fila.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -1165,7 +1196,7 @@ func crear_fila_mod(mod: Dictionary):
 	nombre.modulate = Color(1, 1, 1)
 	textos.add_child(nombre)
 	var desc = Label.new()
-	desc.text = t("mod_locked_desc") if bloqueado else t("mod_" + mod["id"] + "_d")
+	desc.text = (t("mod_minero_lock") if mod["id"] == "minero" else t("mod_locked_desc")) if bloqueado else t("mod_" + mod["id"] + "_d")
 	desc.add_theme_font_size_override("font_size", 18)
 	desc.modulate = Color(0.65, 0.65, 0.65)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1191,6 +1222,8 @@ func crear_fila_mod(mod: Dictionary):
 func mod_desbloqueado(id: String) -> bool:
 	if id == "ils":
 		return logro_slimekiller
+	if id == "minero":
+		return logro_minero
 	return true
 
 
@@ -1280,11 +1313,11 @@ func _on_logros_pulsado(pagina = 0):
 		# Hitbox master tiene una flecha: muestra su "raíz" de logros (Hitbox master II)
 		mostrar_logro(logro_hitbox, t("ach_hitbox_n"), t("ach_hitbox_d"), _on_raiz_hitbox_pulsada)
 	else:
-		# Página 2: Door, Slime killer, Rompe piedras y un espacio todavía sin descubrir
+		# Página 2: Door, Slime killer, Rompe piedras y Minero
 		mostrar_logro(logro_door, t("ach_door_n"), t("ach_door_d"))
 		mostrar_logro(logro_slimekiller, t("ach_slime_n"), t("ach_slime_d"))
 		mostrar_logro(logro_piedras, t("ach_piedras_n"), t("ach_piedras_d"))
-		mostrar_logro(false, "", "")
+		mostrar_logro(logro_minero, t("ach_minero_n"), t("ach_minero_d"))
 
 	# Fila inferior: [flecha izquierda]  VOLVER  [flecha derecha]
 	var fila = HBoxContainer.new()
@@ -1416,7 +1449,7 @@ func crear_flecha_volver(destino: Callable) -> Button:
 # Conexión gratis sin servidor: el que crea la sala es el "host" y el código de la sala es su IP codificada.
 # Más adelante se puede cambiar por un servidor: solo habría que cambiar mp_crear_sala() y mp_unirse().
 const PUERTO_MP = 24680
-const VERSION_MP = "3.8.1"
+const VERSION_MP = "3.9.1"
 const ALFABETO_COD = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 const COLORES_MP = [Color(0.3, 0.8, 1), Color(1, 0.55, 0.3), Color(0.5, 1, 0.4), Color(1, 0.9, 0.3)]
 const META_OPCIONES = [3, 5, 10, 15, 20, 25, 30, 40, 45]
@@ -1441,19 +1474,30 @@ class RelayPeer extends MultiplayerPeerExtension:
 	var peticion = {}
 	var abierto = false
 	var ips = {}
+	var url = ""
+	var intentos = 0
+	var proximo = 0
+	var detalle = ""
 
-	func iniciar_host(url: String) -> int:
+	func _conectar() -> int:
+		ws = WebSocketPeer.new()
+		abierto = false
+		return ws.connect_to_url(url)
+
+	func iniciar_host(url_: String) -> int:
 		servidor = true
 		mi_id = 1
 		peticion = {"op": "host"}
 		estado = MultiplayerPeer.CONNECTION_CONNECTED
-		return ws.connect_to_url(url)
+		url = url_
+		return _conectar()
 
-	func iniciar_cliente(url: String, codigo: String) -> int:
+	func iniciar_cliente(url_: String, codigo: String) -> int:
 		servidor = false
 		peticion = {"op": "join", "code": codigo}
 		estado = MultiplayerPeer.CONNECTION_CONNECTING
-		return ws.connect_to_url(url)
+		url = url_
+		return _conectar()
 
 	func _poll() -> void:
 		if estado == MultiplayerPeer.CONNECTION_DISCONNECTED:
@@ -1473,11 +1517,23 @@ class RelayPeer extends MultiplayerPeerExtension:
 				elif pkt.size() >= 4:
 					cola.append([pkt.decode_s32(0), pkt.slice(4)])
 		elif st == WebSocketPeer.STATE_CLOSED:
+			if not abierto:
+				# Nunca llegó a abrir: el servidor puede estar despertando. Se reintenta cada 3 s (unos 75 s).
+				detalle = "cierre %d" % ws.get_close_code()
+				if intentos < 25:
+					if proximo == 0:
+						proximo = Time.get_ticks_msec() + 3000
+					elif Time.get_ticks_msec() >= proximo:
+						proximo = 0
+						intentos += 1
+						_conectar()
+					return
+				estado = MultiplayerPeer.CONNECTION_DISCONNECTED
+				relay_error.emit("mp_err_conn")
+				return
 			var estaba = estado
 			estado = MultiplayerPeer.CONNECTION_DISCONNECTED
-			if not abierto:
-				relay_error.emit("mp_err_conn")
-			elif servidor:
+			if servidor:
 				relay_error.emit("mp_err_conn")
 			elif estaba == MultiplayerPeer.CONNECTION_CONNECTED:
 				peer_disconnected.emit(1)
@@ -1793,6 +1849,7 @@ func mp_color(id) -> Color:
 # MULTIJUGADOR: primero ¿en qué juegas?, luego CREAR SALA / ENTRAR A SALA
 func _on_multijugador_pulsado():
 	entradas_mods_seguidas = 0  # entrar a otra pantalla rompe la racha de entradas a Mods
+	mp_despertar_relay()
 	limpiar_menu()
 	mp_en_lobby = false
 	crear_etiqueta_menu(t("which_device"), 56, Color(0, 0.6, 1))
@@ -1813,6 +1870,7 @@ func mp_menu_principal():
 	limpiar_menu()
 	mp_en_lobby = false
 	crear_etiqueta_menu(t("multiplayer"), 56, Color(0, 0.6, 1))
+	crear_etiqueta_menu(t("mp_cross"), 22, Color(0.6, 0.6, 0.6))
 	var crear = crear_boton_menu(t("mp_create"))
 	crear.pressed.connect(mp_crear_sala)
 	var entrar = crear_boton_menu(t("mp_join"))
@@ -1838,8 +1896,15 @@ func mp_pantalla_unirse(error := ""):
 	mp_lbl_estado = crear_etiqueta_menu(error, 26, Color(1, 0.4, 0.4))
 	var unirse = crear_boton_menu(t("mp_join_btn"))
 	unirse.pressed.connect(mp_pulsar_unirse)
-	crear_flecha_volver(mp_menu_principal)
+	crear_flecha_volver(mp_volver_de_unirse)
 	mp_campo_codigo.grab_focus.call_deferred()
+
+
+func mp_volver_de_unirse():
+	if mp.conectando:
+		mp_cerrar_conexion()
+		mp_reiniciar()
+	mp_menu_principal()
 
 
 func mp_pulsar_unirse():
@@ -1886,6 +1951,10 @@ func mp_crear_sala():
 		mp_buscar_upnp()
 	mp_bucle_sync()
 	mp_mostrar_lobby()
+	if url_relay != "":
+		await get_tree().create_timer(90.0).timeout
+		if mp.activo and mp.host and mp.cod_net == "":
+			mp_cerrar_y_menu(t("mp_err_conn"))
 
 
 func _mp_relay_codigo(codigo: String):
@@ -1896,10 +1965,25 @@ func _mp_relay_codigo(codigo: String):
 
 
 func _mp_relay_error(clave: String):
+	var texto = t(clave)
+	var peer = multiplayer.multiplayer_peer
+	if clave == "mp_err_conn" and peer is RelayPeer and peer.detalle != "":
+		texto += " [" + peer.detalle + "]"
 	if mp.host:
-		mp_cerrar_y_menu(t(clave))
+		mp_cerrar_y_menu(texto)
 	elif mp.conectando:
-		mp_fallo_union(t(clave))
+		mp_fallo_union(texto)
+
+
+# Despierta el servidor gratis (se duerme si nadie lo usa) en cuanto entras a Multijugador
+func mp_despertar_relay():
+	if url_relay == "":
+		return
+	var http = HTTPRequest.new()
+	add_child(http)
+	http.timeout = 90
+	http.request_completed.connect(func(_a, _b, _c, _d): http.queue_free())
+	http.request(url_relay.replace("wss://", "https://").replace("ws://", "http://"))
 
 
 func mp_unirse(texto: String):
@@ -1927,8 +2011,8 @@ func mp_unirse(texto: String):
 	mp.conectando = true
 	mp_token += 1
 	var tk = mp_token
-	mp_set_estado(t("mp_connecting"), Color(0.6, 0.6, 0.6))
-	await get_tree().create_timer(12.0).timeout
+	mp_set_estado(t("mp_wake") if url_relay != "" and limpio.length() == 4 else t("mp_connecting"), Color(0.6, 0.6, 0.6))
+	await get_tree().create_timer(90.0).timeout
 	if mp.conectando and mp_token == tk:
 		mp_fallo_union(t("mp_err_conn"))
 
@@ -2186,7 +2270,7 @@ func mp_refrescar_lobby():
 		var bc = crear_boton_en(fila_c, t("mp_copy"), 110, 38, 18)
 		bc.pressed.connect(func(): DisplayServer.clipboard_set(par[1]))
 	if mp.buscando:
-		crear_etiqueta_menu(t("mp_searching"), 20, gris)
+		crear_etiqueta_menu(t("mp_wake") if url_relay != "" else t("mp_searching"), 20, gris)
 	elif not hay_codigo:
 		crear_etiqueta_menu(t("mp_no_net"), 22, Color(1, 0.4, 0.4))
 
@@ -3196,6 +3280,47 @@ func generar_mapa_procedural():
 
 
 # Final común de todos los niveles: jugador, luz, velocidad y debug
+# MOD MINERO: un pico dibujado al lado del personaje (se ve solo con el mod activo)
+func actualizar_pico():
+	if jugador == null:
+		return
+	var pico = jugador.get_node_or_null("Pico")
+	if mod_activo != "minero":
+		if pico:
+			pico.queue_free()
+		return
+	if pico:
+		return
+	pico = Node2D.new()
+	pico.name = "Pico"
+	pico.position = Vector2(36, 4)
+	pico.rotation_degrees = 25
+	pico.z_index = 2
+	var mango = Polygon2D.new()
+	mango.polygon = PackedVector2Array([Vector2(-3, -16), Vector2(3, -16), Vector2(3, 24), Vector2(-3, 24)])
+	mango.color = Color(0.55, 0.35, 0.15)
+	pico.add_child(mango)
+	var cabeza = Polygon2D.new()
+	cabeza.polygon = PackedVector2Array([
+		Vector2(-20, -8), Vector2(-12, -17), Vector2(0, -21), Vector2(12, -17), Vector2(20, -8),
+		Vector2(15, -8), Vector2(9, -13), Vector2(0, -15), Vector2(-9, -13), Vector2(-15, -8)])
+	cabeza.color = Color(0.75, 0.8, 0.85)
+	pico.add_child(cabeza)
+	jugador.add_child(pico)
+
+
+# El pico da un golpe cuando rompes un bloque
+func animar_pico():
+	if jugador == null:
+		return
+	var pico = jugador.get_node_or_null("Pico")
+	if pico == null:
+		return
+	var tw = create_tween()
+	tw.tween_property(pico, "rotation_degrees", 80.0, 0.08)
+	tw.tween_property(pico, "rotation_degrees", 25.0, 0.18)
+
+
 func terminar_generacion():
 	if mp.get("en_carrera", false):
 		randomize()
@@ -3204,14 +3329,15 @@ func terminar_generacion():
 		jugador.position = Vector2(96, 5 * tamaño_bloque + 32)
 	else:
 		crear_jugador_auxiliar()
+	actualizar_pico()
 
 	actualizar_luz()
 	actualizar_velocidad()
 	if debug_activo:
 		aplicar_debug()  # las paredes del nivel nuevo también se atraviesan
 
-	# Pistola desde el nivel 36 y dash desde el 38
-	tiene_arma = nivel_actual >= nivel_armas
+	# Pistola solo en los niveles 36 a 40 (los únicos con algo que disparar) y dash desde el 38
+	tiene_arma = nivel_actual >= nivel_armas and nivel_actual <= nivel_jefe
 	tiene_dash = nivel_actual >= nivel_dash
 	actualizar_arma_visual()
 	actualizar_botones_accion()
@@ -4482,6 +4608,11 @@ func romper_pared(p: Node):
 	if piedras_rotas >= PIEDRAS_PARA_LOGRO and not logro_piedras:
 		logro_piedras = true
 		mostrar_mensaje(t("ach_piedras_msg"), Color(1, 0.84, 0), 260)
+	# Logro "Minero": 100 bloques en total. Desbloquea el mod Minero (un pico junto al personaje)
+	if piedras_rotas >= PIEDRAS_PARA_MINERO and not logro_minero:
+		logro_minero = true
+		mostrar_mensaje(t("ach_minero_msg"), Color(1, 0.84, 0), 260)
+	animar_pico()
 	guardar_logros()
 
 
@@ -4835,6 +4966,7 @@ func desbloquear_todos_logros():
 	logro_door = true
 	logro_slimekiller = true
 	logro_piedras = true
+	logro_minero = true
 	piedras_rotas = maxi(piedras_rotas, PIEDRAS_PARA_LOGRO)
 	guardar_logros()
 	cerrar_consola()
@@ -5147,6 +5279,7 @@ func cargar_logros():
 		logro_door = archivo.get_value("logros", "door", false)
 		logro_slimekiller = archivo.get_value("logros", "slimekiller", false)
 		logro_piedras = archivo.get_value("logros", "piedras_logro", false)
+		logro_minero = archivo.get_value("logros", "minero", false)
 		piedras_rotas = int(archivo.get_value("logros", "piedras", 0))
 		tutorial_dash_completo = archivo.get_value("logros", "tutorial_dash", false)
 		nombre_bloqueado = archivo.get_value("perfil", "bloqueado", false)
@@ -5166,6 +5299,10 @@ func cargar_logros():
 			mods_instalados.erase("ils")
 			if mod_activo == "ils":
 				mod_activo = "base"
+		if not mod_desbloqueado("minero"):
+			mods_instalados.erase("minero")
+			if mod_activo == "minero":
+				mod_activo = "base"
 
 
 func guardar_logros():
@@ -5178,6 +5315,7 @@ func guardar_logros():
 	archivo.set_value("logros", "door", logro_door)
 	archivo.set_value("logros", "slimekiller", logro_slimekiller)
 	archivo.set_value("logros", "piedras_logro", logro_piedras)
+	archivo.set_value("logros", "minero", logro_minero)
 	archivo.set_value("logros", "piedras", piedras_rotas)
 	archivo.set_value("logros", "tutorial_dash", tutorial_dash_completo)
 	archivo.set_value("perfil", "bloqueado", nombre_bloqueado)
