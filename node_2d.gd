@@ -271,6 +271,50 @@ const TEXTOS = {
 		"tut_new": "One-use slime. Missed? Bump a wall back and forth 3 times",
 		"multiplayer": "MULTIPLAYER",
 		"nothing_here": "Nothing here yet",
+		"mp_create": "CREATE ROOM",
+		"mp_join": "JOIN ROOM",
+		"mp_enter_code": "Type the room code",
+		"mp_join_btn": "JOIN",
+		"mp_connecting": "Connecting...",
+		"mp_err_code": "Invalid code",
+		"mp_err_conn": "Could not connect to the room",
+		"mp_err_version": "The room uses another game version",
+		"mp_err_full": "The room is full",
+		"mp_err_started": "The race already started",
+		"mp_err_banned": "You are banned from this room",
+		"mp_err_noroom": "Room not found",
+		"mp_kicked": "You were kicked from the room",
+		"mp_banned_msg": "You were banned from the room",
+		"mp_room_closed": "The room was closed",
+		"mp_err_port": "Could not create the room (port in use)",
+		"mp_room": "ROOM",
+		"mp_code_net": "Internet",
+		"mp_code_lan": "Same Wi-Fi",
+		"mp_searching": "Looking for an internet connection...",
+		"mp_no_net": "No network: no room code",
+		"mp_copy": "COPY",
+		"mp_players": "PLAYERS %d/%d",
+		"mp_leader": "LEADER",
+		"mp_you": "YOU",
+		"mp_make_leader": "LEADER",
+		"mp_kick": "KICK",
+		"mp_ban": "BAN",
+		"mp_mode": "MODE",
+		"mp_soon": "soon",
+		"mp_levels": "LEVELS",
+		"mp_max": "MAX PLAYERS",
+		"mp_start": "START",
+		"mp_wait_leader": "Waiting for the leader...",
+		"mp_need_players": "You need at least 2 players",
+		"mp_go": "GO!",
+		"mp_finished": "FINISHED!",
+		"mp_spectating": "Spectating the others",
+		"mp_end_race": "END RACE",
+		"mp_results": "RESULTS",
+		"mp_dnf": "did not finish",
+		"mp_back_lobby": "BACK TO ROOM",
+		"mp_leave": "LEAVE",
+		"mp_pause_note": "The race keeps running",
 		"all_ach": "ALL ACHIEVEMENTS UNLOCKED",
 		"which_device": "What are you playing on?",
 		"phone": "PHONE",
@@ -366,6 +410,50 @@ const TEXTOS = {
 		"tut_new": "Slime de 1 uso. ¿Fallaste? Ve y vuelve contra una pared 3 veces",
 		"multiplayer": "MULTIJUGADOR",
 		"nothing_here": "Nada aquí aún",
+		"mp_create": "CREAR SALA",
+		"mp_join": "ENTRAR A SALA",
+		"mp_enter_code": "Escribe el código de la sala",
+		"mp_join_btn": "UNIRSE",
+		"mp_connecting": "Conectando...",
+		"mp_err_code": "Código no válido",
+		"mp_err_conn": "No se pudo conectar a la sala",
+		"mp_err_version": "La sala usa otra versión del juego",
+		"mp_err_full": "La sala está llena",
+		"mp_err_started": "La carrera ya empezó",
+		"mp_err_banned": "Estás baneado de esta sala",
+		"mp_err_noroom": "Sala no encontrada",
+		"mp_kicked": "Te expulsaron de la sala",
+		"mp_banned_msg": "Te banearon de la sala",
+		"mp_room_closed": "La sala se cerró",
+		"mp_err_port": "No se pudo crear la sala (puerto ocupado)",
+		"mp_room": "SALA",
+		"mp_code_net": "Internet",
+		"mp_code_lan": "Mismo Wi-Fi",
+		"mp_searching": "Buscando conexión de internet...",
+		"mp_no_net": "Sin red: no hay código de sala",
+		"mp_copy": "COPIAR",
+		"mp_players": "JUGADORES %d/%d",
+		"mp_leader": "LÍDER",
+		"mp_you": "TÚ",
+		"mp_make_leader": "LÍDER",
+		"mp_kick": "EXPULSAR",
+		"mp_ban": "BANEAR",
+		"mp_mode": "MODO",
+		"mp_soon": "pronto",
+		"mp_levels": "NIVELES",
+		"mp_max": "MÁX. JUGADORES",
+		"mp_start": "INICIAR",
+		"mp_wait_leader": "Esperando al líder...",
+		"mp_need_players": "Hacen falta al menos 2 jugadores",
+		"mp_go": "¡YA!",
+		"mp_finished": "¡TERMINASTE!",
+		"mp_spectating": "Mirando a los demás",
+		"mp_end_race": "TERMINAR CARRERA",
+		"mp_results": "RESULTADOS",
+		"mp_dnf": "no terminó",
+		"mp_back_lobby": "VOLVER A LA SALA",
+		"mp_leave": "SALIR",
+		"mp_pause_note": "La carrera sigue corriendo",
 		"all_ach": "TODOS LOS LOGROS DESBLOQUEADOS",
 		"which_device": "¿En qué juegas?",
 		"phone": "TELÉFONO",
@@ -461,6 +549,50 @@ const TEXTOS = {
 		"tut_new": "Слайм одноразовый. Промах? Ударься о стену 3 раза туда-сюда",
 		"multiplayer": "МУЛЬТИПЛЕЕР",
 		"nothing_here": "Здесь пока ничего нет",
+		"mp_create": "СОЗДАТЬ КОМНАТУ",
+		"mp_join": "ВОЙТИ В КОМНАТУ",
+		"mp_enter_code": "Введите код комнаты",
+		"mp_join_btn": "ВОЙТИ",
+		"mp_connecting": "Подключение...",
+		"mp_err_code": "Неверный код",
+		"mp_err_conn": "Не удалось подключиться к комнате",
+		"mp_err_version": "В комнате другая версия игры",
+		"mp_err_full": "Комната заполнена",
+		"mp_err_started": "Гонка уже началась",
+		"mp_err_banned": "Вы забанены в этой комнате",
+		"mp_err_noroom": "Комната не найдена",
+		"mp_kicked": "Вас выгнали из комнаты",
+		"mp_banned_msg": "Вас забанили в комнате",
+		"mp_room_closed": "Комната закрыта",
+		"mp_err_port": "Не удалось создать комнату (порт занят)",
+		"mp_room": "КОМНАТА",
+		"mp_code_net": "Интернет",
+		"mp_code_lan": "Тот же Wi-Fi",
+		"mp_searching": "Поиск подключения к интернету...",
+		"mp_no_net": "Нет сети: кода комнаты нет",
+		"mp_copy": "КОПИЯ",
+		"mp_players": "ИГРОКИ %d/%d",
+		"mp_leader": "ЛИДЕР",
+		"mp_you": "ТЫ",
+		"mp_make_leader": "ЛИДЕР",
+		"mp_kick": "ВЫГНАТЬ",
+		"mp_ban": "БАН",
+		"mp_mode": "РЕЖИМ",
+		"mp_soon": "скоро",
+		"mp_levels": "УРОВНИ",
+		"mp_max": "МАКС. ИГРОКОВ",
+		"mp_start": "СТАРТ",
+		"mp_wait_leader": "Ожидание лидера...",
+		"mp_need_players": "Нужно минимум 2 игрока",
+		"mp_go": "ВПЕРЁД!",
+		"mp_finished": "ФИНИШ!",
+		"mp_spectating": "Наблюдаешь за остальными",
+		"mp_end_race": "ЗАКОНЧИТЬ ГОНКУ",
+		"mp_results": "РЕЗУЛЬТАТЫ",
+		"mp_dnf": "не финишировал",
+		"mp_back_lobby": "НАЗАД В КОМНАТУ",
+		"mp_leave": "ВЫЙТИ",
+		"mp_pause_note": "Гонка продолжается",
 		"all_ach": "ВСЕ ДОСТИЖЕНИЯ ПОЛУЧЕНЫ",
 		"which_device": "На чём играешь?",
 		"phone": "ТЕЛЕФОН",
@@ -585,6 +717,7 @@ func _elegir_idioma(codigo: String):
 
 func _ready():
 	randomize()
+	mp_cargar_estado()
 	agregar_teclas_wasd()
 	cargar_logros()
 
@@ -689,6 +822,7 @@ func _ready():
 	# Título de la ventana en PC y menú principal
 	get_window().title = "The Blue Door"
 	crear_menu_principal()
+	mp_preparar()
 
 
 # En PC el personaje se mueve con las flechas o con WASD
@@ -856,7 +990,7 @@ func mostrar_pantalla_principal():
 	menu_caja.add_child(puerta_deco)
 
 	crear_etiqueta_menu("THE BLUE DOOR", 72, Color(0, 0.6, 1))
-	crear_etiqueta_menu("ALPHA 3.7.4", 24, Color(0.6, 0.6, 0.6))
+	crear_etiqueta_menu("ALPHA 3.8.1", 24, Color(0.6, 0.6, 0.6))
 
 	var fila = HBoxContainer.new()
 	fila.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -921,6 +1055,7 @@ func limpiar_menu():
 		boton_check.visible = false
 		boton_idioma.visible = false
 		panel_idioma.visible = false
+	menu_caja.add_theme_constant_override("separation", 20)
 	for hijo in menu_caja.get_children():
 		menu_caja.remove_child(hijo)
 		hijo.queue_free()
@@ -1275,14 +1410,1280 @@ func crear_flecha_volver(destino: Callable) -> Button:
 	return flecha
 
 
-# MULTIJUGADOR: por ahora solo dice que no hay nada
+# ==========================================
+# MULTIJUGADOR (Parte 1: salas, lobby y modo RACE)
+# ==========================================
+# Conexión gratis sin servidor: el que crea la sala es el "host" y el código de la sala es su IP codificada.
+# Más adelante se puede cambiar por un servidor: solo habría que cambiar mp_crear_sala() y mp_unirse().
+const PUERTO_MP = 24680
+const VERSION_MP = "3.8.1"
+const ALFABETO_COD = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+const COLORES_MP = [Color(0.3, 0.8, 1), Color(1, 0.55, 0.3), Color(0.5, 1, 0.4), Color(1, 0.9, 0.3)]
+const META_OPCIONES = [3, 5, 10, 15, 20, 25, 30, 40, 45]
+
+# >>> PON AQUÍ LA DIRECCIÓN DE TU RELAY (ej: "wss://mi-relay.onrender.com"). Vacío = solo misma red Wi-Fi (códigos largos).
+var url_relay = "wss://the-blue-door-relay.onrender.com"
+
+# Transporte por relay: el juego se conecta por WebSocket a un servidor intermedio (relay.js),
+# así funciona entre redes distintas sin abrir puertos. Hace el mismo papel que ENetMultiplayerPeer.
+class RelayPeer extends MultiplayerPeerExtension:
+	signal relay_codigo(codigo)
+	signal relay_error(mensaje)
+	var ws = WebSocketPeer.new()
+	var estado = MultiplayerPeer.CONNECTION_DISCONNECTED
+	var mi_id = 0
+	var servidor = false
+	var cola = []
+	var objetivo = 0
+	var modo = MultiplayerPeer.TRANSFER_MODE_RELIABLE
+	var canal = 0
+	var rechazar = false
+	var peticion = {}
+	var abierto = false
+	var ips = {}
+
+	func iniciar_host(url: String) -> int:
+		servidor = true
+		mi_id = 1
+		peticion = {"op": "host"}
+		estado = MultiplayerPeer.CONNECTION_CONNECTED
+		return ws.connect_to_url(url)
+
+	func iniciar_cliente(url: String, codigo: String) -> int:
+		servidor = false
+		peticion = {"op": "join", "code": codigo}
+		estado = MultiplayerPeer.CONNECTION_CONNECTING
+		return ws.connect_to_url(url)
+
+	func _poll() -> void:
+		if estado == MultiplayerPeer.CONNECTION_DISCONNECTED:
+			return
+		ws.poll()
+		var st = ws.get_ready_state()
+		if st == WebSocketPeer.STATE_OPEN:
+			if not abierto:
+				abierto = true
+				ws.send_text(JSON.stringify(peticion))
+			while ws.get_available_packet_count() > 0:
+				var pkt = ws.get_packet()
+				if ws.was_string_packet():
+					var d = JSON.parse_string(pkt.get_string_from_utf8())
+					if d is Dictionary:
+						_control(d)
+				elif pkt.size() >= 4:
+					cola.append([pkt.decode_s32(0), pkt.slice(4)])
+		elif st == WebSocketPeer.STATE_CLOSED:
+			var estaba = estado
+			estado = MultiplayerPeer.CONNECTION_DISCONNECTED
+			if not abierto:
+				relay_error.emit("mp_err_conn")
+			elif servidor:
+				relay_error.emit("mp_err_conn")
+			elif estaba == MultiplayerPeer.CONNECTION_CONNECTED:
+				peer_disconnected.emit(1)
+
+	func _control(d: Dictionary) -> void:
+		match str(d.get("op", "")):
+			"hosted":
+				relay_codigo.emit(str(d.get("code", "")))
+			"joined":
+				mi_id = int(d.get("id", 0))
+				estado = MultiplayerPeer.CONNECTION_CONNECTED
+				peer_connected.emit(1)
+			"err":
+				relay_error.emit(str(d.get("m", "mp_err_conn")))
+				estado = MultiplayerPeer.CONNECTION_DISCONNECTED
+				ws.close()
+			"peer_in":
+				ips[int(d.get("id", 0))] = str(d.get("ip", ""))
+				peer_connected.emit(int(d.get("id", 0)))
+			"peer_out":
+				peer_disconnected.emit(int(d.get("id", 0)))
+
+	func _get_packet_script() -> PackedByteArray:
+		if cola.is_empty():
+			return PackedByteArray()
+		return cola.pop_front()[1]
+
+	func _get_packet_peer() -> int:
+		if cola.is_empty():
+			return 0
+		return cola[0][0]
+
+	func _get_available_packet_count() -> int:
+		return cola.size()
+
+	func _get_max_packet_size() -> int:
+		return 1 << 24
+
+	func _put_packet_script(p_buffer: PackedByteArray) -> Error:
+		if estado == MultiplayerPeer.CONNECTION_DISCONNECTED or ws.get_ready_state() != WebSocketPeer.STATE_OPEN:
+			return ERR_UNCONFIGURED
+		var trama = PackedByteArray()
+		trama.resize(4)
+		trama.encode_s32(0, objetivo if servidor else 1)
+		trama.append_array(p_buffer)
+		return ws.send(trama, WebSocketPeer.WRITE_MODE_BINARY)
+
+	func _set_target_peer(p_peer: int) -> void:
+		objetivo = p_peer
+
+	func _get_packet_mode() -> MultiplayerPeer.TransferMode:
+		return MultiplayerPeer.TRANSFER_MODE_RELIABLE
+
+	func _get_packet_channel() -> int:
+		return 0
+
+	func _set_transfer_channel(p_channel: int) -> void:
+		canal = p_channel
+
+	func _get_transfer_channel() -> int:
+		return canal
+
+	func _set_transfer_mode(p_mode: MultiplayerPeer.TransferMode) -> void:
+		modo = p_mode
+
+	func _get_transfer_mode() -> MultiplayerPeer.TransferMode:
+		return modo
+
+	func _set_refuse_new_connections(p_enable: bool) -> void:
+		rechazar = p_enable
+
+	func _is_refusing_new_connections() -> bool:
+		return rechazar
+
+	func _is_server() -> bool:
+		return servidor
+
+	func _is_server_relay_supported() -> bool:
+		return true
+
+	func _close() -> void:
+		if ws.get_ready_state() == WebSocketPeer.STATE_OPEN:
+			ws.close()
+		estado = MultiplayerPeer.CONNECTION_DISCONNECTED
+
+	func _disconnect_peer(p_peer: int, p_force: bool) -> void:
+		if servidor and ws.get_ready_state() == WebSocketPeer.STATE_OPEN:
+			ws.send_text(JSON.stringify({"op": "kick", "id": p_peer}))
+
+	func _get_unique_id() -> int:
+		return mi_id
+
+	func _get_connection_status() -> MultiplayerPeer.ConnectionStatus:
+		return estado
+
+
+
+var mp: Dictionary = {}
+var mp_en_lobby = false
+var mp_firma = ""
+var mp_campo_codigo: LineEdit
+var mp_lbl_estado: Label
+var mp_hilo: Thread
+var mp_sync_activo = false
+var mp_token = 0
+var mp_intento = 0
+var mp_tick = 0
+var mp_congelado = false
+var mp_fantasmas = {}
+var mp_lbl_rank: Label
+var mp_filas: Control
+var mp_capa_resultados: CanvasLayer
+var mp_capa_espectador: CanvasLayer
+var mp_lbl_espectador: Label
+var mp_arena: Control
+var mp_puntos = {}
+var mp_hud_t = 0.0
+
+
+func mp_nuevo_dic() -> Dictionary:
+	return {
+		"activo": false, "host": false, "dentro": false, "conectando": false,
+		"modo": "race", "max": 4, "meta": 10, "lider": 1,
+		"nombres": {}, "ips": {}, "baneados": [],
+		"cod_lan": "", "cod_net": "", "buscando": false,
+		"en_carrera": false, "espectando": false, "semilla": 0,
+		"progreso": {}, "pos": {}, "llegada": [], "t0": 0,
+		"dispositivo": "pc", "aviso": "",
+	}
+
+
+# Un solo diccionario guardado en Engine: sobrevive cuando la escena se recarga (volver a la sala)
+func mp_cargar_estado():
+	if Engine.has_meta("mp"):
+		mp = Engine.get_meta("mp")
+	else:
+		mp = mp_nuevo_dic()
+		Engine.set_meta("mp", mp)
+
+
+func mp_reiniciar(aviso := ""):
+	var dispositivo = mp.get("dispositivo", "pc")
+	mp = mp_nuevo_dic()
+	mp.dispositivo = dispositivo
+	mp.aviso = aviso
+	Engine.set_meta("mp", mp)
+
+
+func mp_preparar():
+	if not multiplayer.peer_connected.is_connected(_mp_peer_conectado):
+		multiplayer.peer_connected.connect(_mp_peer_conectado)
+		multiplayer.peer_disconnected.connect(_mp_peer_desconectado)
+		multiplayer.connected_to_server.connect(_mp_conectado)
+		multiplayer.connection_failed.connect(_mp_fallo)
+		multiplayer.server_disconnected.connect(_mp_servidor_cayo)
+	if mp.aviso != "":
+		mp_aviso_menu(mp.aviso)
+		mp.aviso = ""
+	# Volvemos de una carrera: otra vez a la sala
+	if mp.activo and mp.dentro:
+		if mp.host:
+			mp_bucle_sync()
+		mp_mostrar_lobby()
+
+
+func _exit_tree():
+	if mp_hilo != null and mp_hilo.is_started():
+		mp_hilo.wait_to_finish()
+
+
+func mp_aviso_menu(texto: String):
+	if not is_instance_valid(menu_capa):
+		return
+	var aviso = Label.new()
+	aviso.text = texto
+	aviso.add_theme_font_size_override("font_size", 28)
+	aviso.modulate = Color(1, 0.4, 0.4)
+	aviso.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	aviso.position = Vector2(0, 585)
+	aviso.size = Vector2(1152, 40)
+	menu_capa.add_child(aviso)
+	await get_tree().create_timer(3.5).timeout
+	if is_instance_valid(aviso):
+		aviso.queue_free()
+
+
+# ---------- Códigos de sala ----------
+func mp_codificar_ip(ip: String) -> String:
+	var partes = ip.split(".")
+	if partes.size() != 4:
+		return ""
+	var n = 0
+	for p in partes:
+		if not p.is_valid_int() or int(p) < 0 or int(p) > 255:
+			return ""
+		n = (n << 8) | int(p)
+	var s = ""
+	var suma = 0
+	for i in range(7):
+		var v = (n >> (5 * (6 - i))) & 31
+		s += ALFABETO_COD[v]
+		suma += v * (i + 1)
+	s += ALFABETO_COD[suma % 32]
+	return s.substr(0, 4) + "-" + s.substr(4, 4)
+
+
+func mp_decodificar(texto: String) -> String:
+	var limpio = texto.strip_edges().to_upper().replace("-", "").replace(" ", "")
+	if limpio.length() != 8:
+		return ""
+	var n = 0
+	var suma = 0
+	for i in range(7):
+		var v = ALFABETO_COD.find(limpio[i])
+		if v < 0:
+			return ""
+		n = (n << 5) | v
+		suma += v * (i + 1)
+	var c = ALFABETO_COD.find(limpio[7])
+	if c < 0 or c != suma % 32 or (n >> 32) != 0:
+		return ""
+	return "%d.%d.%d.%d" % [(n >> 24) & 255, (n >> 16) & 255, (n >> 8) & 255, n & 255]
+
+
+# Devuelve [ip, puerto] o [] si no es válido. También acepta "192.168.1.5" o "192.168.1.5:24680" (para pruebas)
+func mp_resolver(texto: String) -> Array:
+	var tx = texto.strip_edges()
+	if tx.count(".") == 3:
+		var partes = tx.split(":")
+		var ip = partes[0]
+		if mp_codificar_ip(ip) == "":
+			return []
+		var puerto = PUERTO_MP
+		if partes.size() > 1 and partes[1].is_valid_int():
+			puerto = int(partes[1])
+		return [ip, puerto]
+	var ip2 = mp_decodificar(tx)
+	if ip2 == "":
+		return []
+	return [ip2, PUERTO_MP]
+
+
+func mp_ip_local() -> String:
+	var otra = ""
+	for ip in IP.get_local_addresses():
+		if ip.count(".") != 3 or ip.begins_with("127.") or ip.begins_with("169.254."):
+			continue
+		if ip.begins_with("192.168.") or ip.begins_with("10."):
+			return ip
+		if otra == "":
+			otra = ip
+	return otra
+
+
+func mp_es_privada(ip: String) -> bool:
+	if ip.begins_with("10.") or ip.begins_with("192.168.") or ip.begins_with("127.") or ip.begins_with("169.254."):
+		return true
+	var p = ip.split(".")
+	return p.size() == 4 and int(p[0]) == 172 and int(p[1]) >= 16 and int(p[1]) <= 31
+
+
+# Intenta abrir el puerto en el router (UPnP) para tener un código que funcione por internet
+func mp_buscar_upnp():
+	mp.buscando = true
+	mp_hilo = Thread.new()
+	mp_hilo.start(_mp_upnp_trabajo)
+
+
+func _mp_upnp_trabajo():
+	var ext = ""
+	var upnp = UPNP.new()
+	if upnp.discover(2000, 2, "InternetGatewayDevice") == UPNP.UPNP_RESULT_SUCCESS:
+		var gw = upnp.get_gateway()
+		if gw != null and gw.is_valid_gateway():
+			if upnp.add_port_mapping(PUERTO_MP, PUERTO_MP, "The Blue Door", "UDP") == UPNP.UPNP_RESULT_SUCCESS:
+				ext = upnp.query_external_address()
+	_mp_upnp_listo.call_deferred(ext)
+
+
+func _mp_upnp_listo(ext: String):
+	if mp_hilo != null:
+		mp_hilo.wait_to_finish()
+		mp_hilo = null
+	mp.buscando = false
+	if mp.activo and mp.host and ext != "" and not mp_es_privada(ext):
+		mp.cod_net = mp_codificar_ip(ext)
+	mp_difundir()
+
+
+func mp_mi_nombre() -> String:
+	return nombre_usuario if nombre_usuario != "" else "Player"
+
+
+func mp_nombre_unico(n: String) -> String:
+	var base = n.strip_edges().left(10)
+	if base == "":
+		base = "Player"
+	var nombre = base
+	var k = 2
+	while nombre in mp.nombres.values():
+		nombre = base.left(8) + str(k)
+		k += 1
+	return nombre
+
+
+func mp_color(id) -> Color:
+	var ids = mp.nombres.keys()
+	ids.sort()
+	return COLORES_MP[maxi(ids.find(id), 0) % 4]
+
+
+# ---------- Pantallas del menú ----------
+# MULTIJUGADOR: primero ¿en qué juegas?, luego CREAR SALA / ENTRAR A SALA
 func _on_multijugador_pulsado():
 	entradas_mods_seguidas = 0  # entrar a otra pantalla rompe la racha de entradas a Mods
 	limpiar_menu()
+	mp_en_lobby = false
+	crear_etiqueta_menu(t("which_device"), 56, Color(0, 0.6, 1))
+	var boton_pc = crear_boton_menu("PC")
+	boton_pc.pressed.connect(mp_elegir_dispositivo.bind("pc"))
+	var boton_tel = crear_boton_menu(t("phone"))
+	boton_tel.pressed.connect(mp_elegir_dispositivo.bind("telefono"))
+	crear_flecha_volver(mostrar_pantalla_principal)
+	boton_pc.grab_focus.call_deferred()
+
+
+func mp_elegir_dispositivo(dispositivo: String):
+	mp.dispositivo = dispositivo
+	mp_menu_principal()
+
+
+func mp_menu_principal():
+	limpiar_menu()
+	mp_en_lobby = false
 	crear_etiqueta_menu(t("multiplayer"), 56, Color(0, 0.6, 1))
-	crear_etiqueta_menu(t("nothing_here"), 36, Color(0.6, 0.6, 0.6))
-	var volver = crear_flecha_volver(_volver_de_mods)
+	var crear = crear_boton_menu(t("mp_create"))
+	crear.pressed.connect(mp_crear_sala)
+	var entrar = crear_boton_menu(t("mp_join"))
+	entrar.pressed.connect(mp_pantalla_unirse)
+	crear_flecha_volver(_on_multijugador_pulsado)
+	crear.grab_focus.call_deferred()
+
+
+func mp_pantalla_unirse(error := ""):
+	limpiar_menu()
+	mp_en_lobby = false
+	crear_etiqueta_menu(t("mp_join"), 56, Color(0, 0.6, 1))
+	crear_etiqueta_menu(t("mp_enter_code"), 26, Color(0.6, 0.6, 0.6))
+	mp_campo_codigo = LineEdit.new()
+	mp_campo_codigo.placeholder_text = "XXXX-XXXX"
+	mp_campo_codigo.max_length = 21
+	mp_campo_codigo.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mp_campo_codigo.custom_minimum_size = Vector2(440, 70)
+	mp_campo_codigo.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	mp_campo_codigo.add_theme_font_size_override("font_size", 44)
+	mp_campo_codigo.text_submitted.connect(func(_t): mp_pulsar_unirse())
+	menu_caja.add_child(mp_campo_codigo)
+	mp_lbl_estado = crear_etiqueta_menu(error, 26, Color(1, 0.4, 0.4))
+	var unirse = crear_boton_menu(t("mp_join_btn"))
+	unirse.pressed.connect(mp_pulsar_unirse)
+	crear_flecha_volver(mp_menu_principal)
+	mp_campo_codigo.grab_focus.call_deferred()
+
+
+func mp_pulsar_unirse():
+	if mp.conectando:
+		return
+	mp_unirse(mp_campo_codigo.text)
+
+
+func mp_set_estado(texto: String, color: Color):
+	if mp_lbl_estado != null and is_instance_valid(mp_lbl_estado):
+		mp_lbl_estado.text = texto
+		mp_lbl_estado.modulate = color
+
+
+# ---------- Crear / unirse ----------
+func mp_crear_sala():
+	var peer
+	if url_relay != "":
+		peer = RelayPeer.new()
+		if peer.iniciar_host(url_relay) != OK:
+			mp_aviso_menu(t("mp_err_conn"))
+			return
+		peer.relay_codigo.connect(_mp_relay_codigo)
+		peer.relay_error.connect(_mp_relay_error)
+	else:
+		peer = ENetMultiplayerPeer.new()
+		if peer.create_server(PUERTO_MP, 4) != OK:
+			mp_aviso_menu(t("mp_err_port"))
+			return
+	multiplayer.multiplayer_peer = peer
+	var dispositivo = mp.dispositivo
+	mp_reiniciar()
+	mp.dispositivo = dispositivo
+	mp.activo = true
+	mp.host = true
+	mp.dentro = true
+	mp.lider = 1
+	mp.nombres = {1: mp_nombre_unico(mp_mi_nombre())}
+	if url_relay != "":
+		mp.buscando = true  # hasta que el relay entregue el código
+	else:
+		var ip = mp_ip_local()
+		mp.cod_lan = mp_codificar_ip(ip) if ip != "" else ""
+		mp_buscar_upnp()
+	mp_bucle_sync()
+	mp_mostrar_lobby()
+
+
+func _mp_relay_codigo(codigo: String):
+	mp.cod_net = codigo
+	mp.cod_lan = ""
+	mp.buscando = false
+	mp_difundir()
+
+
+func _mp_relay_error(clave: String):
+	if mp.host:
+		mp_cerrar_y_menu(t(clave))
+	elif mp.conectando:
+		mp_fallo_union(t(clave))
+
+
+func mp_unirse(texto: String):
+	var limpio = texto.strip_edges().to_upper().replace("-", "").replace(" ", "")
+	var peer
+	if url_relay != "" and limpio.length() == 4:
+		peer = RelayPeer.new()
+		if peer.iniciar_cliente(url_relay, limpio) != OK:
+			mp_set_estado(t("mp_err_conn"), Color(1, 0.4, 0.4))
+			return
+		peer.relay_error.connect(_mp_relay_error)
+	else:
+		var destino = mp_resolver(texto)
+		if destino.is_empty():
+			mp_set_estado(t("mp_err_code"), Color(1, 0.4, 0.4))
+			return
+		peer = ENetMultiplayerPeer.new()
+		if peer.create_client(destino[0], destino[1]) != OK:
+			mp_set_estado(t("mp_err_conn"), Color(1, 0.4, 0.4))
+			return
+	multiplayer.multiplayer_peer = peer
+	mp.activo = true
+	mp.host = false
+	mp.dentro = false
+	mp.conectando = true
+	mp_token += 1
+	var tk = mp_token
+	mp_set_estado(t("mp_connecting"), Color(0.6, 0.6, 0.6))
+	await get_tree().create_timer(12.0).timeout
+	if mp.conectando and mp_token == tk:
+		mp_fallo_union(t("mp_err_conn"))
+
+
+func mp_fallo_union(mensaje: String):
+	mp_cerrar_conexion()
+	mp_reiniciar()
+	mp_pantalla_unirse(mensaje)
+
+
+func mp_cerrar_conexion():
+	if multiplayer.multiplayer_peer != null:
+		multiplayer.multiplayer_peer.close()
+	multiplayer.multiplayer_peer = null
+
+
+# Sale de la sala. Si eres el host, la sala se cierra para todos.
+func mp_salir():
+	if mp.host and mp.nombres.size() > 1 and multiplayer.multiplayer_peer != null:
+		mp_sala_cerrada.rpc()
+		await get_tree().create_timer(0.4).timeout
+	mp_cerrar_y_menu()
+
+
+func mp_cerrar_y_menu(aviso := ""):
+	mp_cerrar_conexion()
+	mp_reiniciar(aviso)
+	partida_en_curso = false
+	_volver_al_menu()
+
+
+func _mp_conectado():
+	mp_set_estado(t("mp_connecting"), Color(0.6, 0.6, 0.6))
+	mp_hola.rpc_id(1, mp_mi_nombre(), VERSION_MP)
+
+
+func _mp_fallo():
+	if mp.conectando:
+		mp_fallo_union(t("mp_err_conn"))
+
+
+func _mp_servidor_cayo():
+	if mp.activo and not mp.host:
+		mp_cerrar_y_menu(t("mp_room_closed"))
+
+
+func _mp_peer_conectado(id):
+	if not mp.host:
+		return
+	var ip = ""
+	var peer = multiplayer.multiplayer_peer
+	if peer is ENetMultiplayerPeer:
+		var pp = peer.get_peer(id)
+		if pp != null:
+			ip = pp.get_remote_address()
+	elif peer is RelayPeer:
+		ip = peer.ips.get(id, "")
+	mp.ips[id] = ip
+	if ip != "" and mp.baneados.has(ip):
+		mp_rechazar(id, "mp_err_banned")
+		return
+	# Si en 6 segundos no se presenta, se desconecta
+	await get_tree().create_timer(6.0).timeout
+	if mp.host and not mp.nombres.has(id) and multiplayer.multiplayer_peer != null:
+		multiplayer.multiplayer_peer.disconnect_peer(id)
+
+
+func _mp_peer_desconectado(id):
+	if not mp.host:
+		return
+	mp.nombres.erase(id)
+	mp.ips.erase(id)
+	mp.pos.erase(id)
+	mp.progreso.erase(id)
+	if mp.lider == id:
+		mp.lider = 1
+	mp_difundir()
+	if mp.en_carrera:
+		mp_revisar_fin()
+
+
+func mp_rechazar(id: int, clave: String):
+	mp_rechazo.rpc_id(id, clave)
+	await get_tree().create_timer(0.4).timeout
+	if multiplayer.multiplayer_peer != null:
+		multiplayer.multiplayer_peer.disconnect_peer(id)
+
+
+# ---------- Mensajes de red (lobby) ----------
+@rpc("any_peer", "call_remote", "reliable")
+func mp_hola(nombre: String, version: String):
+	if not mp.host:
+		return
+	var id = multiplayer.get_remote_sender_id()
+	if mp.nombres.has(id):
+		return
+	if version != VERSION_MP:
+		mp_rechazar(id, "mp_err_version")
+	elif mp.en_carrera:
+		mp_rechazar(id, "mp_err_started")
+	elif mp.nombres.size() >= mp.max:
+		mp_rechazar(id, "mp_err_full")
+	else:
+		mp.nombres[id] = mp_nombre_unico(nombre)
+		mp_difundir()
+
+
+@rpc("authority", "call_remote", "reliable")
+func mp_rechazo(clave: String):
+	mp_fallo_union(t(clave))
+
+
+func mp_estado_dic() -> Dictionary:
+	return {"nom": mp.nombres, "lid": mp.lider, "mod": mp.modo, "mx": mp.max, "meta": mp.meta,
+		"lan": mp.cod_lan, "net": mp.cod_net, "bus": mp.buscando}
+
+
+func mp_difundir():
+	if not mp.host or multiplayer.multiplayer_peer == null:
+		return
+	mp_estado.rpc(mp_estado_dic())
+	mp_refrescar_lobby()
+
+
+@rpc("authority", "call_remote", "reliable")
+func mp_estado(d: Dictionary):
+	mp.nombres = d.nom
+	mp.lider = d.lid
+	mp.modo = d.mod
+	mp.max = d.mx
+	mp.meta = d.meta
+	mp.cod_lan = d.lan
+	mp.cod_net = d.net
+	mp.buscando = d.bus
+	var primera = not mp.dentro
+	mp.dentro = true
+	mp.conectando = false
+	if primera:
+		mp_mostrar_lobby()
+	else:
+		mp_refrescar_lobby()
+
+
+# El host reenvía el estado cada poco (así nadie se queda desactualizado, por ejemplo al volver de una carrera)
+func mp_bucle_sync():
+	if mp_sync_activo:
+		return
+	mp_sync_activo = true
+	while mp.activo and mp.host:
+		await get_tree().create_timer(1.5).timeout
+		if mp.activo and mp.host and multiplayer.multiplayer_peer != null and mp.nombres.size() > 1:
+			mp_estado.rpc(mp_estado_dic())
+	mp_sync_activo = false
+
+
+# Acciones del líder: se piden al host, que comprueba que quien lo pide es el líder
+@rpc("any_peer", "call_remote", "reliable")
+func mp_pedir(accion: String, arg):
+	if mp.host:
+		mp_procesar(multiplayer.get_remote_sender_id(), accion, arg)
+
+
+func mp_accion(accion: String, arg = 0):
+	if mp.host:
+		mp_procesar(1, accion, arg)
+	else:
+		mp_pedir.rpc_id(1, accion, arg)
+
+
+func mp_procesar(emisor: int, accion: String, arg):
+	if emisor != mp.lider:
+		return
+	match accion:
+		"expulsar", "banear":
+			var id = int(arg)
+			if id == 1 or id == emisor or not mp.nombres.has(id):
+				return
+			if accion == "banear":
+				var ip = mp.ips.get(id, "")
+				if ip != "" and not mp.baneados.has(ip):
+					mp.baneados.append(ip)
+			mp_expulsado.rpc_id(id, "mp_banned_msg" if accion == "banear" else "mp_kicked")
+			await get_tree().create_timer(0.4).timeout
+			if multiplayer.multiplayer_peer != null:
+				multiplayer.multiplayer_peer.disconnect_peer(id)
+		"lider":
+			if mp.nombres.has(int(arg)):
+				mp.lider = int(arg)
+				mp_difundir()
+		"max":
+			var n = clampi(mp.max + int(arg), 2, 4)
+			if n >= mp.nombres.size():
+				mp.max = n
+				mp_difundir()
+		"meta":
+			var i = clampi(META_OPCIONES.find(mp.meta) + int(arg), 0, META_OPCIONES.size() - 1)
+			mp.meta = META_OPCIONES[i]
+			mp_difundir()
+		"iniciar":
+			if not mp.en_carrera and mp.nombres.size() >= 2:
+				mp_empezar.rpc(randi(), mp.meta)
+		"terminar":
+			if mp.en_carrera:
+				mp_terminar_carrera()
+
+
+@rpc("authority", "call_remote", "reliable")
+func mp_expulsado(clave: String):
+	mp_cerrar_y_menu(t(clave))
+
+
+@rpc("authority", "call_remote", "reliable")
+func mp_sala_cerrada():
+	mp_cerrar_y_menu(t("mp_room_closed"))
+
+
+# ---------- Pantalla de la sala ----------
+func mp_mostrar_lobby():
+	mp_en_lobby = true
+	mp_firma = ""
+	mp_refrescar_lobby()
+
+
+func mp_refrescar_lobby():
+	if not mp_en_lobby or not is_instance_valid(menu_capa):
+		return
+	var firma = str([mp.nombres, mp.lider, mp.modo, mp.max, mp.meta, mp.cod_lan, mp.cod_net, mp.buscando])
+	if firma == mp_firma:
+		return
+	mp_firma = firma
+	limpiar_menu()
+	menu_caja.add_theme_constant_override("separation", 6)
+	var yo = multiplayer.get_unique_id()
+	var soy_lider = mp.lider == yo
+	var azul = Color(0, 0.6, 1)
+	var gris = Color(0.6, 0.6, 0.6)
+
+	crear_etiqueta_menu(t("mp_room"), 44, azul)
+
+	# Códigos de la sala
+	var hay_codigo = false
+	for par in [[t("mp_code_net"), mp.cod_net], [t("mp_code_lan"), mp.cod_lan]]:
+		if par[1] == "":
+			continue
+		hay_codigo = true
+		var fila_c = HBoxContainer.new()
+		fila_c.alignment = BoxContainer.ALIGNMENT_CENTER
+		fila_c.add_theme_constant_override("separation", 12)
+		menu_caja.add_child(fila_c)
+		var lc = Label.new()
+		lc.text = par[0] + ":  " + par[1]
+		lc.add_theme_font_size_override("font_size", 32)
+		lc.modulate = Color(1, 0.84, 0)
+		fila_c.add_child(lc)
+		var bc = crear_boton_en(fila_c, t("mp_copy"), 110, 38, 18)
+		bc.pressed.connect(func(): DisplayServer.clipboard_set(par[1]))
+	if mp.buscando:
+		crear_etiqueta_menu(t("mp_searching"), 20, gris)
+	elif not hay_codigo:
+		crear_etiqueta_menu(t("mp_no_net"), 22, Color(1, 0.4, 0.4))
+
+	# Jugadores
+	var ids = mp.nombres.keys()
+	ids.sort()
+	crear_etiqueta_menu(t("mp_players") % [ids.size(), mp.max], 26, gris)
+	for id in ids:
+		var fila = HBoxContainer.new()
+		fila.alignment = BoxContainer.ALIGNMENT_CENTER
+		fila.add_theme_constant_override("separation", 8)
+		menu_caja.add_child(fila)
+		var nom = Label.new()
+		nom.text = str(mp.nombres[id]) + ("  (" + t("mp_you") + ")" if id == yo else "")
+		nom.add_theme_font_size_override("font_size", 28)
+		nom.modulate = mp_color(id)
+		nom.custom_minimum_size = Vector2(300, 0)
+		fila.add_child(nom)
+		var marca = Label.new()
+		marca.text = t("mp_leader") if id == mp.lider else ""
+		marca.add_theme_font_size_override("font_size", 22)
+		marca.modulate = Color(1, 0.84, 0)
+		marca.custom_minimum_size = Vector2(90, 0)
+		fila.add_child(marca)
+		if soy_lider and id != yo:
+			var b1 = crear_boton_en(fila, t("mp_make_leader"), 100, 38, 17)
+			b1.pressed.connect(mp_accion.bind("lider", id))
+			if id != 1:
+				var b2 = crear_boton_en(fila, t("mp_kick"), 110, 38, 17)
+				b2.pressed.connect(mp_accion.bind("expulsar", id))
+				var b3 = crear_boton_en(fila, t("mp_ban"), 100, 38, 17)
+				b3.pressed.connect(mp_accion.bind("banear", id))
+
+	# Modo (PVP viene en la Parte 2)
+	var fila_m = HBoxContainer.new()
+	fila_m.alignment = BoxContainer.ALIGNMENT_CENTER
+	fila_m.add_theme_constant_override("separation", 10)
+	menu_caja.add_child(fila_m)
+	var lm = Label.new()
+	lm.text = t("mp_mode")
+	lm.add_theme_font_size_override("font_size", 24)
+	fila_m.add_child(lm)
+	var b_race = crear_boton_en(fila_m, "RACE", 130, 44, 24)
+	b_race.disabled = true
+	b_race.modulate = Color(1, 0.84, 0)
+	var b_pvp = crear_boton_en(fila_m, "PVP (" + t("mp_soon") + ")", 220, 44, 20)
+	b_pvp.disabled = true
+
+	# Niveles de la carrera y máximo de jugadores
+	var fila_o = HBoxContainer.new()
+	fila_o.alignment = BoxContainer.ALIGNMENT_CENTER
+	fila_o.add_theme_constant_override("separation", 8)
+	menu_caja.add_child(fila_o)
+	mp_selector(fila_o, t("mp_levels"), str(mp.meta), soy_lider, "meta")
+	var sep = Control.new()
+	sep.custom_minimum_size = Vector2(30, 0)
+	fila_o.add_child(sep)
+	mp_selector(fila_o, t("mp_max"), str(mp.max), soy_lider, "max")
+
+	# Iniciar
+	if soy_lider:
+		var ini = crear_boton_en(menu_caja, t("mp_start"), 300, 60, 32)
+		ini.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		ini.disabled = ids.size() < 2
+		ini.pressed.connect(mp_accion.bind("iniciar", 0))
+		if ids.size() < 2:
+			crear_etiqueta_menu(t("mp_need_players"), 20, gris)
+	else:
+		crear_etiqueta_menu(t("mp_wait_leader"), 26, gris)
+	var volver = crear_flecha_volver(mp_salir)
 	volver.grab_focus.call_deferred()
+
+
+func mp_selector(fila: HBoxContainer, titulo: String, valor: String, activo: bool, accion: String):
+	var l = Label.new()
+	l.text = titulo
+	l.add_theme_font_size_override("font_size", 24)
+	fila.add_child(l)
+	var menos = crear_boton_en(fila, "-", 44, 44, 26)
+	menos.disabled = not activo
+	menos.pressed.connect(mp_accion.bind(accion, -1))
+	var v = Label.new()
+	v.text = valor
+	v.add_theme_font_size_override("font_size", 30)
+	v.custom_minimum_size = Vector2(44, 0)
+	v.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	fila.add_child(v)
+	var mas = crear_boton_en(fila, "+", 44, 44, 26)
+	mas.disabled = not activo
+	mas.pressed.connect(mp_accion.bind(accion, 1))
+
+
+# ==========================================
+# MODO RACE
+# ==========================================
+# Todos juegan los mismos niveles (misma semilla) y gana quien llega antes a la puerta del último nivel.
+@rpc("authority", "call_local", "reliable")
+func mp_empezar(semilla: int, meta: int):
+	mp.en_carrera = true
+	mp.semilla = semilla
+	mp.meta = meta
+	mp.espectando = false
+	mp.llegada = []
+	mp.pos = {}
+	mp.progreso = {}
+	for id in mp.nombres:
+		mp.progreso[id] = 1
+	mp_en_lobby = false
+	mp_congelado = false
+	mp_intento = 0
+	# Estado limpio de partida
+	nivel_actual = 1
+	corazones = corazones_max
+	tiene_dorado = false
+	tiene_linterna = false
+	actualizar_corazones()
+	texto_nivel.text = t("level") + ": 1"
+	var es_tel = mp.dispositivo == "telefono"
+	dispositivo_actual = mp.dispositivo
+	for boton in get_tree().get_nodes_in_group("botones_tactiles"):
+		boton.visible = es_tel
+	boton_pausa.visible = es_tel
+	if is_instance_valid(mp_capa_resultados):
+		mp_capa_resultados.queue_free()
+	if is_instance_valid(mp_capa_espectador):
+		mp_capa_espectador.queue_free()
+	if is_instance_valid(menu_capa):
+		menu_capa.queue_free()
+	partida_en_curso = true
+	generar_mapa_procedural()
+	get_tree().paused = false
+	mp_crear_hud()
+	mp_cuenta_atras()
+
+
+func mp_cuenta_atras():
+	mp_congelado = true
+	if jugador:
+		jugador.set_physics_process(false)
+	var lbl = Label.new()
+	lbl.add_theme_font_size_override("font_size", 120)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.position = Vector2(0, 200)
+	lbl.size = Vector2(1152, 160)
+	lbl.modulate = Color(1, 0.84, 0)
+	capa_interfaz.add_child(lbl)
+	for n in [3, 2, 1]:
+		lbl.text = str(n)
+		await get_tree().create_timer(1.0).timeout
+		if not mp.en_carrera:
+			lbl.queue_free()
+			return
+	lbl.text = t("mp_go")
+	mp_congelado = false
+	mp.t0 = Time.get_ticks_msec()
+	if jugador and pausa_capa == null:
+		jugador.set_physics_process(true)
+	await get_tree().create_timer(0.8).timeout
+	if is_instance_valid(lbl):
+		lbl.queue_free()
+
+
+func mp_crear_hud():
+	if is_instance_valid(mp_lbl_rank):
+		mp_lbl_rank.queue_free()
+	if is_instance_valid(mp_filas):
+		mp_filas.queue_free()
+	mp_lbl_rank = Label.new()
+	mp_lbl_rank.position = Vector2(905, 2)
+	mp_lbl_rank.add_theme_font_size_override("font_size", 44)
+	mp_lbl_rank.modulate = Color(1, 0.84, 0)
+	capa_interfaz.add_child(mp_lbl_rank)
+	mp_filas = Control.new()
+	mp_filas.position = Vector2(905, 58)
+	mp_filas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	capa_interfaz.add_child(mp_filas)
+	mp_actualizar_hud()
+
+
+func mp_pos_llegada(id) -> int:
+	for i in range(mp.llegada.size()):
+		if int(mp.llegada[i][0]) == id:
+			return i
+	return -1
+
+
+func mp_comparar(a, b) -> bool:
+	var la = mp_pos_llegada(a)
+	var lb = mp_pos_llegada(b)
+	if la >= 0 and lb >= 0:
+		return la < lb
+	if la >= 0:
+		return true
+	if lb >= 0:
+		return false
+	var pa = mp.progreso.get(a, 1)
+	var pb = mp.progreso.get(b, 1)
+	if pa != pb:
+		return pa > pb
+	var xa = mp.pos[a].x if mp.pos.has(a) else 0.0
+	var xb = mp.pos[b].x if mp.pos.has(b) else 0.0
+	if not is_equal_approx(xa, xb):
+		return xa > xb
+	return a < b
+
+
+func mp_ranking() -> Array:
+	var ids = mp.nombres.keys()
+	ids.sort_custom(mp_comparar)
+	return ids
+
+
+func mp_actualizar_hud():
+	if not is_instance_valid(mp_lbl_rank) or not is_instance_valid(mp_filas):
+		return
+	var rk = mp_ranking()
+	mp_lbl_rank.text = "%d/%d" % [rk.find(multiplayer.get_unique_id()) + 1, rk.size()]
+	for h in mp_filas.get_children():
+		h.queue_free()
+	var y = 0
+	for id in rk:
+		var termino = mp_pos_llegada(id) >= 0
+		var nivel = int(mp.progreso.get(id, 1))
+		var l = Label.new()
+		l.text = str(mp.nombres[id]).left(8) + ("  OK" if termino else "  L%d" % nivel)
+		l.add_theme_font_size_override("font_size", 18)
+		l.modulate = mp_color(id)
+		l.position = Vector2(0, y)
+		mp_filas.add_child(l)
+		var fondo = ColorRect.new()
+		fondo.color = Color(0.2, 0.2, 0.2, 0.8)
+		fondo.size = Vector2(150, 5)
+		fondo.position = Vector2(0, y + 25)
+		fondo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		mp_filas.add_child(fondo)
+		var frac = 1.0 if termino else clampf((nivel - 1.0) / float(mp.meta), 0.0, 1.0)
+		var barra = ColorRect.new()
+		barra.color = mp_color(id)
+		barra.size = Vector2(150.0 * frac, 5)
+		barra.position = Vector2(0, y + 25)
+		barra.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		mp_filas.add_child(barra)
+		y += 36
+
+
+func mp_enviar_posicion():
+	if mp.espectando or jugador == null:
+		return
+	mp_tick += 1
+	if mp_tick % 3 == 0:
+		mp_posicion.rpc(nivel_actual, jugador.position)
+
+
+@rpc("any_peer", "call_remote", "unreliable_ordered")
+func mp_posicion(nivel: int, p: Vector2):
+	var id = multiplayer.get_remote_sender_id()
+	mp.progreso[id] = nivel
+	mp.pos[id] = p
+
+
+func _process(delta):
+	if not mp.get("en_carrera", false):
+		return
+	mp_actualizar_fantasmas(delta)
+	mp_hud_t += delta
+	if mp_hud_t >= 0.2:
+		mp_hud_t = 0.0
+		mp_actualizar_hud()
+		if mp.espectando:
+			mp_actualizar_espectador()
+
+
+# Fantasmas: los demás jugadores que están en tu mismo nivel
+func mp_actualizar_fantasmas(delta):
+	var yo = multiplayer.get_unique_id()
+	for id in mp.nombres:
+		if id == yo:
+			continue
+		var g = mp_fantasmas.get(id)
+		if g == null:
+			g = Node2D.new()
+			var s = Sprite2D.new()
+			s.texture = preload("res://icon.svg")
+			s.scale = Vector2(0.4, 0.4)
+			s.modulate = Color(mp_color(id), 0.5)
+			g.add_child(s)
+			var n = Label.new()
+			n.text = str(mp.nombres[id]).left(8)
+			n.add_theme_font_size_override("font_size", 14)
+			n.position = Vector2(-30, -52)
+			n.modulate = mp_color(id)
+			g.add_child(n)
+			add_child(g)
+			mp_fantasmas[id] = g
+		var visible_ = mp.progreso.get(id, 1) == nivel_actual and mp.pos.has(id) and mp_pos_llegada(id) < 0 and not mp.espectando
+		g.visible = visible_
+		if visible_:
+			var objetivo: Vector2 = mp.pos[id]
+			if g.position.distance_to(objetivo) > 200.0:
+				g.position = objetivo
+			else:
+				g.position = g.position.lerp(objetivo, clampf(delta * 14.0, 0.0, 1.0))
+	for id in mp_fantasmas.keys():
+		if not mp.nombres.has(id):
+			mp_fantasmas[id].queue_free()
+			mp_fantasmas.erase(id)
+
+
+# Llegaste a la puerta del último nivel de la carrera
+func mp_termine():
+	if mp.espectando:
+		return
+	mp.espectando = true
+	mp_congelado = true
+	if jugador:
+		jugador.set_physics_process(false)
+		jugador.visible = false
+		jugador.collision_layer = 0
+		jugador.collision_mask = 0
+	var ms = Time.get_ticks_msec() - int(mp.t0)
+	if mp.host:
+		mp_registrar_llegada(1, ms)
+	else:
+		mp_llegue.rpc_id(1, ms)
+	mp_crear_espectador()
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func mp_llegue(ms: int):
+	if mp.host:
+		mp_registrar_llegada(multiplayer.get_remote_sender_id(), ms)
+
+
+func mp_registrar_llegada(id: int, ms: int):
+	if mp_pos_llegada(id) >= 0 or not mp.nombres.has(id):
+		return
+	mp.llegada.append([id, ms])
+	mp_recibir_llegada.rpc(mp.llegada)
+	mp_revisar_fin()
+
+
+@rpc("authority", "call_remote", "reliable")
+func mp_recibir_llegada(lista: Array):
+	mp.llegada = lista
+
+
+func mp_revisar_fin():
+	if not mp.en_carrera:
+		return
+	for id in mp.nombres:
+		if mp_pos_llegada(id) < 0:
+			return
+	mp_terminar_carrera()
+
+
+func mp_terminar_carrera():
+	mp_fin.rpc(mp.llegada, mp.nombres)
+
+
+@rpc("authority", "call_local", "reliable")
+func mp_fin(llegada: Array, nombres: Dictionary):
+	mp.llegada = llegada
+	mp.nombres = nombres
+	mp.en_carrera = false
+	mp_mostrar_resultados()
+
+
+func mp_tiempo(ms) -> String:
+	var s = float(ms) / 1000.0
+	return "%02d:%04.1f" % [int(s / 60.0), fmod(s, 60.0)]
+
+
+# El que ya llegó solo puede mirar: ve a los demás moverse en una mini arena
+func mp_crear_espectador():
+	mp_capa_espectador = CanvasLayer.new()
+	mp_capa_espectador.layer = 97
+	add_child(mp_capa_espectador)
+	var fondo = ColorRect.new()
+	fondo.color = Color(0, 0, 0, 0.92)
+	fondo.size = Vector2(890, 648)
+	mp_capa_espectador.add_child(fondo)
+	mp_lbl_espectador = Label.new()
+	mp_lbl_espectador.add_theme_font_size_override("font_size", 44)
+	mp_lbl_espectador.modulate = Color(1, 0.84, 0)
+	mp_lbl_espectador.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mp_lbl_espectador.position = Vector2(0, 20)
+	mp_lbl_espectador.size = Vector2(890, 60)
+	mp_capa_espectador.add_child(mp_lbl_espectador)
+	var sub = Label.new()
+	sub.text = t("mp_spectating")
+	sub.add_theme_font_size_override("font_size", 24)
+	sub.modulate = Color(0.6, 0.6, 0.6)
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub.position = Vector2(0, 80)
+	sub.size = Vector2(890, 34)
+	mp_capa_espectador.add_child(sub)
+	mp_arena = ColorRect.new()
+	mp_arena.color = Color(0.08, 0.08, 0.12)
+	mp_arena.size = Vector2(1152 * 0.66, 640 * 0.66)
+	mp_arena.position = Vector2(65, 130)
+	mp_capa_espectador.add_child(mp_arena)
+	mp_puntos = {}
+	if mp.lider == multiplayer.get_unique_id():
+		var b = crear_boton_en(mp_capa_espectador, t("mp_end_race"), 300, 50, 24)
+		b.position = Vector2(295, 580)
+		b.pressed.connect(mp_accion.bind("terminar", 0))
+	mp_actualizar_espectador()
+
+
+func mp_actualizar_espectador():
+	if not is_instance_valid(mp_capa_espectador):
+		return
+	var yo = multiplayer.get_unique_id()
+	var puesto = mp_pos_llegada(yo)
+	mp_lbl_espectador.text = t("mp_finished") + ("  %d/%d  %s" % [puesto + 1, mp.nombres.size(), mp_tiempo(mp.llegada[puesto][1])] if puesto >= 0 else "")
+	for id in mp.nombres:
+		if id == yo:
+			continue
+		var punto = mp_puntos.get(id)
+		if punto == null:
+			punto = ColorRect.new()
+			punto.size = Vector2(22, 22)
+			punto.color = mp_color(id)
+			var n = Label.new()
+			n.add_theme_font_size_override("font_size", 16)
+			n.position = Vector2(-10, -22)
+			punto.add_child(n)
+			mp_arena.add_child(punto)
+			mp_puntos[id] = punto
+		var termino = mp_pos_llegada(id) >= 0
+		punto.visible = mp.pos.has(id) and not termino
+		if punto.visible:
+			punto.position = (mp.pos[id] as Vector2) * 0.66 - Vector2(11, 11)
+			punto.get_child(0).text = "%s L%d" % [str(mp.nombres[id]).left(8), int(mp.progreso.get(id, 1))]
+
+
+func mp_mostrar_resultados():
+	get_tree().paused = true
+	if is_instance_valid(pausa_capa):
+		pausa_capa.queue_free()
+		pausa_capa = null
+	if is_instance_valid(mp_capa_espectador):
+		mp_capa_espectador.queue_free()
+	mp_capa_resultados = CanvasLayer.new()
+	mp_capa_resultados.layer = 110
+	mp_capa_resultados.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(mp_capa_resultados)
+	var fondo = ColorRect.new()
+	fondo.color = Color(0, 0, 0, 1)
+	mp_capa_resultados.add_child(fondo)
+	fondo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var centro = CenterContainer.new()
+	mp_capa_resultados.add_child(centro)
+	centro.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var caja = VBoxContainer.new()
+	caja.add_theme_constant_override("separation", 12)
+	centro.add_child(caja)
+	var titulo = Label.new()
+	titulo.text = t("mp_results")
+	titulo.add_theme_font_size_override("font_size", 60)
+	titulo.modulate = Color(0, 0.6, 1)
+	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caja.add_child(titulo)
+	var yo = multiplayer.get_unique_id()
+	var puesto = 1
+	for entrada in mp.llegada:
+		var id = int(entrada[0])
+		var l = Label.new()
+		l.text = "%d.  %s    %s" % [puesto, str(mp.nombres.get(id, "?")), mp_tiempo(entrada[1])]
+		l.add_theme_font_size_override("font_size", 34 if id == yo else 28)
+		l.modulate = Color(1, 0.84, 0) if puesto == 1 else mp_color(id)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		caja.add_child(l)
+		puesto += 1
+	for id in mp.nombres:
+		if mp_pos_llegada(id) < 0:
+			var l2 = Label.new()
+			l2.text = "-.  %s    %s" % [str(mp.nombres[id]), t("mp_dnf")]
+			l2.add_theme_font_size_override("font_size", 24)
+			l2.modulate = Color(0.5, 0.5, 0.5)
+			l2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			caja.add_child(l2)
+	var volver = crear_boton_en(caja, t("mp_back_lobby"), 420, 70, 30)
+	volver.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	volver.pressed.connect(mp_volver_a_sala)
+	var salir = crear_boton_en(caja, t("mp_leave"), 300, 60, 26)
+	salir.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	salir.pressed.connect(mp_salir)
+	volver.grab_focus.call_deferred()
+
+
+# Vuelve a la sala: se recarga la escena (limpia) y mp_preparar() abre el lobby otra vez
+func mp_volver_a_sala():
+	mp.en_carrera = false
+	mp.espectando = false
+	partida_en_curso = false
+	_volver_al_menu()
 
 
 func crear_boton_menu(texto: String) -> Button:
@@ -1398,6 +2799,10 @@ func actualizar_corazones():
 
 
 func _physics_process(delta):
+	if mp.get("en_carrera", false):
+		mp_enviar_posicion()
+		if mp.espectando:
+			return
 	# Niveles 26 a 35 (y los nuevos 41 a 45): bloques slime
 	if nivel_actual >= nivel_slime:
 		procesar_slime(delta)
@@ -1564,6 +2969,11 @@ func generar_mapa_procedural():
 
 	# Nuevo nivel / reaparición: sin invencibilidad pendiente y daño activado de nuevo
 	var venia_de_muerte = reiniciando
+	# Carrera multijugador: la semilla hace que todos tengan el mismo nivel
+	if mp.get("en_carrera", false):
+		if venia_de_muerte:
+			mp_intento += 1
+		seed(int(mp.semilla) + nivel_actual * 7919 + mp_intento * 104729)
 	reiniciando = false
 	frames_gracia = 5
 	terminar_invencibilidad()
@@ -1787,6 +3197,8 @@ func generar_mapa_procedural():
 
 # Final común de todos los niveles: jugador, luz, velocidad y debug
 func terminar_generacion():
+	if mp.get("en_carrera", false):
+		randomize()
 	# Reposicionamos al jugador
 	if jugador:
 		jugador.position = Vector2(96, 5 * tamaño_bloque + 32)
@@ -3161,7 +4573,12 @@ func abrir_pausa():
 	# No se abre en menús, consola o pantalla final (el juego ya está en pausa)
 	if get_tree().paused or pausa_capa != null or not partida_en_curso:
 		return
-	get_tree().paused = true
+	if mp.get("en_carrera", false):
+		# En carrera el reloj no se detiene: solo se congela tu personaje
+		if jugador:
+			jugador.set_physics_process(false)
+	else:
+		get_tree().paused = true
 
 	pausa_capa = CanvasLayer.new()
 	pausa_capa.layer = 105
@@ -3222,7 +4639,7 @@ func _input(event):
 	caja.add_child(salir)
 
 	var aviso = Label.new()
-	aviso.text = t("pause_note")
+	aviso.text = t("mp_pause_note") if mp.get("en_carrera", false) else t("pause_note")
 	aviso.add_theme_font_size_override("font_size", 20)
 	aviso.modulate = Color(0.6, 0.6, 0.6)
 	aviso.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -3236,17 +4653,26 @@ func cerrar_pausa():
 		return
 	pausa_capa.queue_free()
 	pausa_capa = null
-	get_tree().paused = false
+	if mp.get("en_carrera", false):
+		if jugador and not mp_congelado:
+			jugador.set_physics_process(true)
+	else:
+		get_tree().paused = false
 
 
 # EXIT: guarda la partida y vuelve al menú principal
 func _on_salir_de_partida():
+	if mp.get("activo", false):
+		mp_salir()
+		return
 	guardar_partida()
 	partida_en_curso = false
 	_volver_al_menu()
 
 
 func guardar_partida():
+	if mp.get("activo", false):
+		return  # en multijugador no se guarda
 	var archivo = ConfigFile.new()
 	archivo.set_value("partida", "dispositivo", dispositivo_actual)
 	archivo.set_value("partida", "nivel", nivel_actual)
@@ -3672,6 +5098,14 @@ func _on_puerta_tocada(body):
 		if nivel_actual == nivel_jefe and jefe_vivo:
 			mostrar_mensaje(t("kill_boss"), Color(1, 0.3, 0.3), 300)
 			return
+		# Carrera multijugador: la puerta de la meta te deja como espectador
+		if mp.get("en_carrera", false):
+			if mp.espectando:
+				return
+			if nivel_actual >= mp.meta:
+				mp_termine.call_deferred()
+				return
+			mp_intento = 0
 		# La puerta del último nivel termina la Alpha
 		if nivel_actual >= nivel_final:
 			terminar_alpha.call_deferred()
