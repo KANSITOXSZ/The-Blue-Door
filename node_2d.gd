@@ -102,9 +102,13 @@ var texto_tutorial: Label        # mini tutorial del nivel 26
 # Los slimes de estos niveles son de 1 solo uso. Si fallas, te acercas al muro de tu sala
 # y te echas hacia atrás y hacia adelante 3 veces para romper un bloque.
 const PIEDRAS_PARA_LOGRO = 20
-const PIEDRAS_PARA_MINERO = 100   # logro "Minero": desbloquea el mod Minero (el pico)
+const PIEDRAS_PARA_MINERO = 100   # logro "Minero": desbloquea el accesorio Minero (el pico)
 var piedras_rotas = 0            # total acumulado entre niveles y partidas (se guarda en el dispositivo)
 var logro_minero = false         # logro "Minero": romper 100 bloques en total (desbloquea el mod Minero)
+var logro_sticky = false         # logro "Sticky situation": 50 slimes seguidos sin fallar
+var racha_slime = 0               # slimes seguidos sin fallar (suma entre niveles; un fallo o un daño la reinicia)
+var vuelo_cruzo = false           # true si el disparo actual cruzó un bloque fantasma (o llegó a la linterna)
+const RACHA_PARA_LOGRO = 50
 var logro_piedras = false        # logro "Rompe piedras": romper 20 bloques
 var golpes_para_romper = 3
 var puertas_nivel: Array = []    # columnas de los muros del nivel de slime actual
@@ -189,6 +193,12 @@ var lista_mods = [
 		"desc": "White blocks use the green slime model, red blocks and shots use red slime models",
 		"fondo": Color(0.25, 0.85, 0.3), "texto": Color(0.05, 0.2, 0.05),
 	},
+
+]
+
+# ACCESORIOS: cosas que llevas puestas. No cambian los bloques, así que se combinan con cualquier mod.
+var accesorio_activo = ""
+var lista_accesorios = [
 	{
 		"id": "minero", "letras": "MIN", "nombre": "Miner",
 		"desc": "A pickaxe appears next to your character",
@@ -240,7 +250,7 @@ const TEXTOS = {
 		"unlock_modder": "ACHIEVEMENT UNLOCKED: Modder",
 		"name_unlocked": "USERNAME UNLOCKED: you can change it now",
 		"mods_title": "MODS  %d/2",
-		"achievements_title": "ACHIEVEMENTS  %d/2",
+		"achievements_title": "ACHIEVEMENTS  %d/3",
 		"mod_locked_desc": "Kill the big slime to unlock this mod",
 		"mod_locked_btn": "LOCKED",
 		"mod_active": "ACTIVE",
@@ -290,8 +300,20 @@ const TEXTOS = {
 		"mp_err_started": "The race already started",
 		"mp_err_banned": "You are banned from this room",
 		"mp_err_noroom": "Room not found",
+		"accessories": "ACCESSORIES",
+		"acc_equip": "EQUIP",
+		"acc_remove": "REMOVE",
+		"ach_sticky_n": "Sticky situation",
+		"ach_sticky_d": "Use 50 slimes in a row without failing (counts across levels)",
+		"ach_sticky_msg": "ACHIEVEMENT: Sticky situation",
+		"sticky_progress": "STICKY: %d/%d",
+		"pvp_respawn": "RESPAWNING IN %d",
+		"pvp_win": "WINNER: %s",
+		"pvp_draw": "DRAW",
+		"mp_need_n": "%d players are needed",
+		"mp_fixed": "%d players",
 		"mod_minero_n": "Miner",
-		"mod_minero_d": "A pickaxe appears next to your character",
+		"mod_minero_d": "A pickaxe next to your character: breaks blocks with 1 fewer hit, no slime needed",
 		"mod_minero_lock": "Earn the Miner achievement to unlock this mod",
 		"ach_minero_n": "Miner",
 		"ach_minero_d": "Break 100 blocks in total",
@@ -387,7 +409,7 @@ const TEXTOS = {
 		"unlock_modder": "LOGRO DESBLOQUEADO: Modder",
 		"name_unlocked": "NOMBRE DESBLOQUEADO: ya puedes cambiarlo",
 		"mods_title": "MODS  %d/2",
-		"achievements_title": "LOGROS  %d/2",
+		"achievements_title": "LOGROS  %d/3",
 		"mod_locked_desc": "Mata al slime gigante para desbloquear este mod",
 		"mod_locked_btn": "BLOQUEADO",
 		"mod_active": "ACTIVO",
@@ -437,8 +459,20 @@ const TEXTOS = {
 		"mp_err_started": "La carrera ya empezó",
 		"mp_err_banned": "Estás baneado de esta sala",
 		"mp_err_noroom": "Sala no encontrada",
+		"accessories": "ACCESORIOS",
+		"acc_equip": "EQUIPAR",
+		"acc_remove": "QUITAR",
+		"ach_sticky_n": "Situación pegajosa",
+		"ach_sticky_d": "Usa 50 slimes seguidos sin fallar (cuenta entre niveles)",
+		"ach_sticky_msg": "LOGRO: Situación pegajosa",
+		"sticky_progress": "PEGAJOSA: %d/%d",
+		"pvp_respawn": "REAPARECES EN %d",
+		"pvp_win": "GANA: %s",
+		"pvp_draw": "EMPATE",
+		"mp_need_n": "Hacen falta %d jugadores",
+		"mp_fixed": "%d jugadores",
 		"mod_minero_n": "Minero",
-		"mod_minero_d": "Aparece un pico al lado de tu personaje",
+		"mod_minero_d": "Un pico al lado de tu personaje: rompes bloques con 1 golpe menos y sin gastar el slime",
 		"mod_minero_lock": "Consigue el logro Minero para desbloquear este mod",
 		"ach_minero_n": "Minero",
 		"ach_minero_d": "Rompe 100 bloques en total",
@@ -534,7 +568,7 @@ const TEXTOS = {
 		"unlock_modder": "ДОСТИЖЕНИЕ ПОЛУЧЕНО: Моддер",
 		"name_unlocked": "ИМЯ РАЗБЛОКИРОВАНО: теперь его можно изменить",
 		"mods_title": "МОДЫ  %d/2",
-		"achievements_title": "ДОСТИЖЕНИЯ  %d/2",
+		"achievements_title": "ДОСТИЖЕНИЯ  %d/3",
 		"mod_locked_desc": "Убей большого слайма, чтобы разблокировать этот мод",
 		"mod_locked_btn": "ЗАКРЫТО",
 		"mod_active": "АКТИВЕН",
@@ -584,8 +618,20 @@ const TEXTOS = {
 		"mp_err_started": "Гонка уже началась",
 		"mp_err_banned": "Вы забанены в этой комнате",
 		"mp_err_noroom": "Комната не найдена",
+		"accessories": "АКСЕССУАРЫ",
+		"acc_equip": "НАДЕТЬ",
+		"acc_remove": "СНЯТЬ",
+		"ach_sticky_n": "Липкая ситуация",
+		"ach_sticky_d": "Используй 50 слаймов подряд без ошибок (считается между уровнями)",
+		"ach_sticky_msg": "ДОСТИЖЕНИЕ: Липкая ситуация",
+		"sticky_progress": "ЛИПКАЯ: %d/%d",
+		"pvp_respawn": "ВОЗРОЖДЕНИЕ ЧЕРЕЗ %d",
+		"pvp_win": "ПОБЕДА: %s",
+		"pvp_draw": "НИЧЬЯ",
+		"mp_need_n": "Нужно игроков: %d",
+		"mp_fixed": "Игроков: %d",
 		"mod_minero_n": "Шахтёр",
-		"mod_minero_d": "Рядом с персонажем появляется кирка",
+		"mod_minero_d": "Кирка рядом с персонажем: блоки ломаются на 1 удар быстрее, слайм не нужен",
 		"mod_minero_lock": "Получи достижение «Шахтёр», чтобы открыть этот мод",
 		"ach_minero_n": "Шахтёр",
 		"ach_minero_d": "Разрушь 100 блоков суммарно",
@@ -1021,7 +1067,7 @@ func mostrar_pantalla_principal():
 	menu_caja.add_child(puerta_deco)
 
 	crear_etiqueta_menu("THE BLUE DOOR", 72, Color(0, 0.6, 1))
-	crear_etiqueta_menu("ALPHA 3.9.1", 24, Color(0.6, 0.6, 0.6))
+	crear_etiqueta_menu("ALPHA 4.0.0", 24, Color(0.6, 0.6, 0.6))
 
 	var fila = HBoxContainer.new()
 	fila.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -1029,12 +1075,20 @@ func mostrar_pantalla_principal():
 	menu_caja.add_child(fila)
 
 	var boton_logros = crear_boton_en(fila, t("achievements"), 220, 70, 30)
+	boton_logros.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	boton_logros.pressed.connect(_on_logros_pulsado)
 
 	var boton_jugar = crear_boton_en(fila, t("play"), 280, 80, 40)
+	boton_jugar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	boton_jugar.pressed.connect(_on_jugar_pulsado)
 
-	var boton_mods = crear_boton_en(fila, t("mods"), 220, 70, 30)
+	# A la derecha: ACCESORIOS encima de MODS
+	var col_derecha = VBoxContainer.new()
+	col_derecha.add_theme_constant_override("separation", 8)
+	fila.add_child(col_derecha)
+	var boton_acc = crear_boton_en(col_derecha, t("accessories"), 220, 52, 24)
+	boton_acc.pressed.connect(_on_accesorios_pulsado)
+	var boton_mods = crear_boton_en(col_derecha, t("mods"), 220, 60, 30)
 	boton_mods.pressed.connect(_on_mods_desde_menu)
 
 	# MULTIJUGADOR: debajo de JUGAR (todavía no tiene nada)
@@ -1158,6 +1212,69 @@ func _on_mods_pulsado(logro_nuevo = false, pagina = 0):
 	volver.grab_focus.call_deferred()
 
 
+func _on_accesorios_pulsado():
+	entradas_mods_seguidas = 0  # entrar a otra pantalla rompe la racha de entradas a Mods
+	limpiar_menu()
+	menu_caja.add_theme_constant_override("separation", 12)
+	crear_etiqueta_menu(t("accessories"), 52, Color(0, 0.6, 1))
+	for acc in lista_accesorios:
+		crear_fila_accesorio(acc)
+	var volver = crear_boton_menu(t("back"))
+	volver.custom_minimum_size = Vector2(240, 60)
+	volver.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	volver.pressed.connect(_volver_de_mods)
+	volver.grab_focus.call_deferred()
+
+
+func crear_fila_accesorio(acc: Dictionary):
+	var fila = HBoxContainer.new()
+	fila.alignment = BoxContainer.ALIGNMENT_CENTER
+	fila.add_theme_constant_override("separation", 20)
+	menu_caja.add_child(fila)
+	var foto = ColorRect.new()
+	foto.color = acc["fondo"]
+	foto.custom_minimum_size = Vector2(66, 66)
+	fila.add_child(foto)
+	var letras = Label.new()
+	letras.text = acc["letras"]
+	letras.add_theme_font_size_override("font_size", 28)
+	letras.add_theme_color_override("font_color", acc["texto"])
+	letras.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	letras.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	foto.add_child(letras)
+	letras.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var textos = VBoxContainer.new()
+	textos.custom_minimum_size = Vector2(560, 0)
+	textos.alignment = BoxContainer.ALIGNMENT_CENTER
+	fila.add_child(textos)
+	var bloqueado = not accesorio_desbloqueado(acc["id"])
+	var nombre = Label.new()
+	nombre.text = "???" if bloqueado else t("mod_" + acc["id"] + "_n")
+	nombre.add_theme_font_size_override("font_size", 28)
+	textos.add_child(nombre)
+	var desc = Label.new()
+	desc.text = t("mod_" + acc["id"] + "_lock") if bloqueado else t("mod_" + acc["id"] + "_d")
+	desc.add_theme_font_size_override("font_size", 18)
+	desc.modulate = Color(0.65, 0.65, 0.65)
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	textos.add_child(desc)
+	var boton = crear_boton_en(fila, "", 200, 54, 24)
+	if bloqueado:
+		boton.text = t("mod_locked_btn")
+		boton.disabled = true
+	else:
+		boton.text = t("acc_remove") if accesorio_activo == acc["id"] else t("acc_equip")
+		boton.pressed.connect(_equipar_accesorio.bind(acc["id"]))
+
+
+func _equipar_accesorio(id: String):
+	if not accesorio_desbloqueado(id):
+		return
+	accesorio_activo = "" if accesorio_activo == id else id
+	guardar_logros()
+	_on_accesorios_pulsado()
+
+
 func _volver_de_mods():
 	menu_caja.add_theme_constant_override("separation", 20)
 	mostrar_pantalla_principal()
@@ -1196,7 +1313,7 @@ func crear_fila_mod(mod: Dictionary):
 	nombre.modulate = Color(1, 1, 1)
 	textos.add_child(nombre)
 	var desc = Label.new()
-	desc.text = (t("mod_minero_lock") if mod["id"] == "minero" else t("mod_locked_desc")) if bloqueado else t("mod_" + mod["id"] + "_d")
+	desc.text = t("mod_locked_desc") if bloqueado else t("mod_" + mod["id"] + "_d")
 	desc.add_theme_font_size_override("font_size", 18)
 	desc.modulate = Color(0.65, 0.65, 0.65)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1222,9 +1339,14 @@ func crear_fila_mod(mod: Dictionary):
 func mod_desbloqueado(id: String) -> bool:
 	if id == "ils":
 		return logro_slimekiller
+	return true
+
+
+# Un accesorio se desbloquea con su logro (el pico, con "Minero")
+func accesorio_desbloqueado(id: String) -> bool:
 	if id == "minero":
 		return logro_minero
-	return true
+	return false
 
 
 # Instalar un mod (el logro "Modder" se consigue con el primero que instales)
@@ -1312,12 +1434,18 @@ func _on_logros_pulsado(pagina = 0):
 		mostrar_logro(logro_modder, t("ach_modder_n"), t("ach_modder_d"))
 		# Hitbox master tiene una flecha: muestra su "raíz" de logros (Hitbox master II)
 		mostrar_logro(logro_hitbox, t("ach_hitbox_n"), t("ach_hitbox_d"), _on_raiz_hitbox_pulsada)
-	else:
-		# Página 2: Door, Slime killer, Rompe piedras y Minero
+	elif pagina == 1:
+		# Página 2: Door, Slime killer, Rompe piedras y Sticky situation
 		mostrar_logro(logro_door, t("ach_door_n"), t("ach_door_d"))
 		mostrar_logro(logro_slimekiller, t("ach_slime_n"), t("ach_slime_d"))
 		mostrar_logro(logro_piedras, t("ach_piedras_n"), t("ach_piedras_d"))
+		mostrar_logro(logro_sticky, t("ach_sticky_n"), t("ach_sticky_d"))
+	else:
+		# Página 3: aquí van los logros nuevos de cada update (Minero + espacios sin descubrir)
 		mostrar_logro(logro_minero, t("ach_minero_n"), t("ach_minero_d"))
+		mostrar_logro(false, "", "")
+		mostrar_logro(false, "", "")
+		mostrar_logro(false, "", "")
 
 	# Fila inferior: [flecha izquierda]  VOLVER  [flecha derecha]
 	var fila = HBoxContainer.new()
@@ -1331,7 +1459,7 @@ func _on_logros_pulsado(pagina = 0):
 	var volver = crear_boton_en(fila, t("back"), 240, 60, 36)
 	volver.pressed.connect(_volver_de_mods)
 	volver.grab_focus.call_deferred()
-	if pagina < 1:
+	if pagina < 2:
 		var siguiente = crear_boton_flecha(fila, true)
 		siguiente.pressed.connect(_on_logros_pulsado.bind(pagina + 1))
 
@@ -1449,7 +1577,7 @@ func crear_flecha_volver(destino: Callable) -> Button:
 # Conexión gratis sin servidor: el que crea la sala es el "host" y el código de la sala es su IP codificada.
 # Más adelante se puede cambiar por un servidor: solo habría que cambiar mp_crear_sala() y mp_unirse().
 const PUERTO_MP = 24680
-const VERSION_MP = "3.9.1"
+const VERSION_MP = "4.0.0"
 const ALFABETO_COD = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 const COLORES_MP = [Color(0.3, 0.8, 1), Color(1, 0.55, 0.3), Color(0.5, 1, 0.4), Color(1, 0.9, 0.3)]
 const META_OPCIONES = [3, 5, 10, 15, 20, 25, 30, 40, 45]
@@ -1660,7 +1788,7 @@ func mp_nuevo_dic() -> Dictionary:
 		"nombres": {}, "ips": {}, "baneados": [],
 		"cod_lan": "", "cod_net": "", "buscando": false,
 		"en_carrera": false, "espectando": false, "semilla": 0,
-		"progreso": {}, "pos": {}, "llegada": [], "t0": 0,
+		"progreso": {}, "pos": {}, "intentos": {}, "pvp": false, "equipos": {}, "hp": {}, "vivo": {}, "kills": {}, "muertes": {}, "llegada": [], "t0": 0,
 		"dispositivo": "pc", "aviso": "",
 	}
 
@@ -2211,9 +2339,23 @@ func mp_procesar(emisor: int, accion: String, arg):
 			var i = clampi(META_OPCIONES.find(mp.meta) + int(arg), 0, META_OPCIONES.size() - 1)
 			mp.meta = META_OPCIONES[i]
 			mp_difundir()
+		"modo":
+			var nuevo = str(arg)
+			if nuevo == "race":
+				mp.modo = "race"
+				mp_difundir()
+			elif PVP_JUGADORES.has(nuevo) and mp.nombres.size() <= PVP_JUGADORES[nuevo]:
+				mp.modo = nuevo
+				mp.max = PVP_JUGADORES[nuevo]
+				mp_difundir()
 		"iniciar":
-			if not mp.en_carrera and mp.nombres.size() >= 2:
-				mp_empezar.rpc(randi(), mp.meta)
+			if mp.en_carrera:
+				return
+			if mp.modo == "race":
+				if mp.nombres.size() >= 2:
+					mp_empezar.rpc(randi(), mp.meta)
+			elif mp.nombres.size() == PVP_JUGADORES.get(mp.modo, 2):
+				pvp_empezar.rpc(randi(), mp.modo, pvp_calcular_equipos(mp.modo))
 		"terminar":
 			if mp.en_carrera:
 				mp_terminar_carrera()
@@ -2304,40 +2446,53 @@ func mp_refrescar_lobby():
 				var b3 = crear_boton_en(fila, t("mp_ban"), 100, 38, 17)
 				b3.pressed.connect(mp_accion.bind("banear", id))
 
-	# Modo (PVP viene en la Parte 2)
+	# Modo: RACE o PVP (1v1, 2v2, 1v1v1)
 	var fila_m = HBoxContainer.new()
 	fila_m.alignment = BoxContainer.ALIGNMENT_CENTER
-	fila_m.add_theme_constant_override("separation", 10)
+	fila_m.add_theme_constant_override("separation", 8)
 	menu_caja.add_child(fila_m)
 	var lm = Label.new()
 	lm.text = t("mp_mode")
 	lm.add_theme_font_size_override("font_size", 24)
 	fila_m.add_child(lm)
-	var b_race = crear_boton_en(fila_m, "RACE", 130, 44, 24)
-	b_race.disabled = true
-	b_race.modulate = Color(1, 0.84, 0)
-	var b_pvp = crear_boton_en(fila_m, "PVP (" + t("mp_soon") + ")", 220, 44, 20)
-	b_pvp.disabled = true
+	for m in ["race", "1v1", "2v2", "1v1v1"]:
+		if m == "1v1":
+			var lp = Label.new()
+			lp.text = "PVP"
+			lp.add_theme_font_size_override("font_size", 22)
+			lp.modulate = Color(1, 0.5, 0.5)
+			fila_m.add_child(lp)
+		var bm = crear_boton_en(fila_m, "RACE" if m == "race" else m, 110 if m == "race" else 90, 44, 22)
+		bm.disabled = mp.modo == m or not soy_lider
+		if mp.modo == m:
+			bm.modulate = Color(1, 0.84, 0)
+		bm.pressed.connect(mp_accion.bind("modo", m))
 
-	# Niveles de la carrera y máximo de jugadores
-	var fila_o = HBoxContainer.new()
-	fila_o.alignment = BoxContainer.ALIGNMENT_CENTER
-	fila_o.add_theme_constant_override("separation", 8)
-	menu_caja.add_child(fila_o)
-	mp_selector(fila_o, t("mp_levels"), str(mp.meta), soy_lider, "meta")
-	var sep = Control.new()
-	sep.custom_minimum_size = Vector2(30, 0)
-	fila_o.add_child(sep)
-	mp_selector(fila_o, t("mp_max"), str(mp.max), soy_lider, "max")
+	var es_pvp = mp.modo != "race"
+	var necesarios = PVP_JUGADORES.get(mp.modo, 2)
+	if es_pvp:
+		crear_etiqueta_menu(t("mp_fixed") % necesarios, 24, gris)
+	else:
+		# Niveles de la carrera y máximo de jugadores
+		var fila_o = HBoxContainer.new()
+		fila_o.alignment = BoxContainer.ALIGNMENT_CENTER
+		fila_o.add_theme_constant_override("separation", 8)
+		menu_caja.add_child(fila_o)
+		mp_selector(fila_o, t("mp_levels"), str(mp.meta), soy_lider, "meta")
+		var sep = Control.new()
+		sep.custom_minimum_size = Vector2(30, 0)
+		fila_o.add_child(sep)
+		mp_selector(fila_o, t("mp_max"), str(mp.max), soy_lider, "max")
 
 	# Iniciar
+	var listo = ids.size() == necesarios if es_pvp else ids.size() >= 2
 	if soy_lider:
 		var ini = crear_boton_en(menu_caja, t("mp_start"), 300, 60, 32)
 		ini.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		ini.disabled = ids.size() < 2
+		ini.disabled = not listo
 		ini.pressed.connect(mp_accion.bind("iniciar", 0))
-		if ids.size() < 2:
-			crear_etiqueta_menu(t("mp_need_players"), 20, gris)
+		if not listo:
+			crear_etiqueta_menu(t("mp_need_n") % necesarios if es_pvp else t("mp_need_players"), 20, gris)
 	else:
 		crear_etiqueta_menu(t("mp_wait_leader"), 26, gris)
 	var volver = crear_flecha_volver(mp_salir)
@@ -2364,17 +2519,627 @@ func mp_selector(fila: HBoxContainer, titulo: String, valor: String, activo: boo
 
 
 # ==========================================
+# MODO PVP (1v1, 2v2 y 1v1v1)
+# ==========================================
+# Arena blanca con obstáculos para cubrirse (igual para todos: misma semilla, simétrica).
+# Cada jugador manda sobre su propia vida (100 HP): el daño baja según la distancia del disparo
+# (más cerca = más daño). Al perder una vida reapareces a los 10 s. Con 3 vidas perdidas la partida termina.
+# Gana: en 1v1 el que tiene más vida; con más jugadores el equipo o jugador con más kills.
+const PVP_VIDAS = 3
+const PVP_HP = 100
+const PVP_RESPAWN = 10
+const PVP_VEL_BALA = 760.0
+const PVP_ALCANCE = 760.0
+const PVP_CADENCIA = 0.28
+const PVP_CERCA = 150.0       # teléfono: por debajo de esta distancia el aimbot dispara solo
+const PVP_LEJOS = 900.0       # teléfono: el aimbot apunta al rival más cercano dentro de este alcance
+const PVP_JUGADORES = {"1v1": 2, "2v2": 4, "1v1v1": 3}
+
+var pvp_hp = PVP_HP
+var pvp_vivo = true
+var pvp_inv = 0.0
+var pvp_cd = 0.0
+var pvp_serial = 0
+var pvp_balas: Array = []
+var pvp_obstaculos: Array = []
+var pvp_fin_enviado = false
+var pvp_lbl_centro: Label
+var pvp_barra: ColorRect
+var pvp_lbl_hp: Label
+
+
+func pvp_es_equipo(a, b) -> bool:
+	return mp.equipos.get(a, -1) == mp.equipos.get(b, -2)
+
+
+func pvp_color(id) -> Color:
+	return COLORES_MP[int(mp.equipos.get(id, 0)) % 4]
+
+
+# Equipos y puntos de aparición (los calcula el host al iniciar)
+func pvp_calcular_equipos(modo: String) -> Dictionary:
+	var ids = mp.nombres.keys()
+	ids.sort()
+	var eq = {}
+	for i in range(ids.size()):
+		eq[ids[i]] = i if modo == "1v1v1" else (i % 2 if modo == "2v2" else i)
+	return eq
+
+
+func pvp_punto(id) -> Vector2:
+	var eq = int(mp.equipos.get(id, 0))
+	var ids = mp.nombres.keys()
+	ids.sort()
+	var compañeros = []
+	for i in ids:
+		if int(mp.equipos.get(i, 0)) == eq:
+			compañeros.append(i)
+	var slot = compañeros.find(id)
+	var dos = compañeros.size() > 1
+	match eq:
+		0:
+			return Vector2(96, (224 if slot == 0 else 416) if dos else 320)
+		1:
+			return Vector2(1056, (224 if slot == 0 else 416) if dos else 320)
+	return Vector2(576, 96)
+
+
+func pvp_crear_arena(semilla: int):
+	for g in ["paredes", "rojos", "dorados", "negros", "linternas", "slimes", "pasas", "flechas", "pvp_nodos"]:
+		for n in get_tree().get_nodes_in_group(g):
+			n.queue_free()
+	reiniciar_slime()
+	reiniciar_armas()
+	pvp_obstaculos = []
+	# Zona blanca
+	var suelo = ColorRect.new()
+	suelo.color = Color(0.93, 0.93, 0.97)
+	suelo.size = Vector2(columnas * tamaño_bloque, filas * tamaño_bloque)
+	suelo.z_index = -50
+	suelo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	suelo.add_to_group("pvp_nodos")
+	add_child(suelo)
+	# Obstáculos: se generan en la mitad izquierda y se reflejan a la derecha (arena justa)
+	var rng = RandomNumberGenerator.new()
+	rng.seed = semilla
+	var ocupadas = {}
+	var intentos = 0
+	var colocados = 0
+	while colocados < 6 and intentos < 80:
+		intentos += 1
+		var w = 1 + (rng.randi() % 2)
+		var h = 1 + (rng.randi() % 2)
+		if w == 2 and h == 2:
+			h = 1
+		var cx = 3 + (rng.randi() % (6 - w + 1))    # columnas 3 a 8
+		var cy = 2 + (rng.randi() % (7 - h + 1))    # filas 2 a 8
+		var libre = true
+		for ix in range(cx - 1, cx + w + 1):
+			for iy in range(cy - 1, cy + h + 1):
+				if ocupadas.has(Vector2i(ix, iy)):
+					libre = false
+		if not libre:
+			continue
+		for ix in range(cx, cx + w):
+			for iy in range(cy, cy + h):
+				ocupadas[Vector2i(ix, iy)] = true
+		colocados += 1
+		pvp_poner_obstaculo(Rect2(cx * tamaño_bloque, cy * tamaño_bloque, w * tamaño_bloque, h * tamaño_bloque))
+		var espejo_x = (columnas - cx - w) * tamaño_bloque
+		pvp_poner_obstaculo(Rect2(espejo_x, cy * tamaño_bloque, w * tamaño_bloque, h * tamaño_bloque))
+
+
+func pvp_poner_obstaculo(r: Rect2):
+	pvp_obstaculos.append(r)
+	var cuerpo = StaticBody2D.new()
+	cuerpo.position = r.position
+	var col = CollisionShape2D.new()
+	var forma = RectangleShape2D.new()
+	forma.size = r.size
+	col.shape = forma
+	col.position = r.size / 2
+	cuerpo.add_child(col)
+	var borde = ColorRect.new()
+	borde.color = Color(0.2, 0.22, 0.35)
+	borde.size = r.size
+	borde.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cuerpo.add_child(borde)
+	var centro = ColorRect.new()
+	centro.color = Color(0.42, 0.46, 0.65)
+	centro.position = Vector2(4, 4)
+	centro.size = r.size - Vector2(8, 8)
+	centro.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cuerpo.add_child(centro)
+	cuerpo.add_to_group("pvp_nodos")
+	add_child(cuerpo)
+
+
+# ---------- Inicio de la partida ----------
+@rpc("authority", "call_local", "reliable")
+func pvp_empezar(semilla: int, modo: String, equipos: Dictionary):
+	mp.en_carrera = true
+	mp.pvp = true
+	mp.espectando = false
+	mp.modo = modo
+	mp.equipos = equipos
+	mp.hp = {}
+	mp.vivo = {}
+	mp.kills = {}
+	mp.muertes = {}
+	mp.pos = {}
+	mp.intentos = {}
+	mp.progreso = {}
+	for id in mp.nombres:
+		mp.hp[id] = PVP_HP
+		mp.vivo[id] = true
+		mp.kills[id] = 0
+		mp.muertes[id] = 0
+		mp.progreso[id] = 1
+	pvp_fin_enviado = false
+	pvp_hp = PVP_HP
+	pvp_vivo = true
+	pvp_inv = 0.0
+	pvp_cd = 0.0
+	for b in pvp_balas:
+		if is_instance_valid(b["nodo"]):
+			b["nodo"].queue_free()
+	pvp_balas = []
+	mp_en_lobby = false
+	mp_congelado = false
+	mp_intento = 0
+	nivel_actual = 1
+	corazones_max = PVP_VIDAS
+	corazones = PVP_VIDAS
+	tiene_dorado = false
+	tiene_linterna = false
+	var es_tel = mp.dispositivo == "telefono"
+	dispositivo_actual = mp.dispositivo
+	if is_instance_valid(mp_capa_resultados):
+		mp_capa_resultados.queue_free()
+	if is_instance_valid(mp_capa_espectador):
+		mp_capa_espectador.queue_free()
+	if is_instance_valid(menu_capa):
+		menu_capa.queue_free()
+	partida_en_curso = true
+	pvp_crear_arena(semilla)
+	# La puerta no se usa en PVP
+	if puerta:
+		puerta.position = Vector2(-400, -400)
+	oscuridad.color = Color(1, 1, 1)
+	texto_tutorial.text = ""
+	texto_nivel.text = "PVP " + modo
+	contenedor_corazones.visible = true
+	actualizar_corazones()
+	tiene_arma = true
+	tiene_dash = false
+	for boton in get_tree().get_nodes_in_group("botones_tactiles"):
+		boton.visible = es_tel
+	boton_pausa.visible = es_tel
+	actualizar_arma_visual()
+	actualizar_botones_accion()
+	if jugador:
+		jugador.position = pvp_punto(multiplayer.get_unique_id())
+		jugador.visible = true
+		jugador.modulate = Color(1, 1, 1, 1)
+		jugador.collision_layer = 1
+		jugador.collision_mask = 1
+	get_tree().paused = false
+	pvp_crear_hud()
+	mp_cuenta_atras()
+
+
+func pvp_crear_hud():
+	for n in [pvp_barra, pvp_lbl_hp, pvp_lbl_centro, mp_lbl_rank, mp_filas]:
+		if is_instance_valid(n):
+			n.queue_free()
+	var fondo = ColorRect.new()
+	fondo.color = Color(0.2, 0.2, 0.2, 0.9)
+	fondo.size = Vector2(220, 16)
+	fondo.position = Vector2(25, 64)
+	fondo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	capa_interfaz.add_child(fondo)
+	pvp_barra = ColorRect.new()
+	pvp_barra.color = Color(0.2, 0.9, 0.3)
+	pvp_barra.size = Vector2(220, 16)
+	pvp_barra.position = Vector2(25, 64)
+	pvp_barra.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	capa_interfaz.add_child(pvp_barra)
+	pvp_lbl_hp = Label.new()
+	pvp_lbl_hp.position = Vector2(252, 58)
+	pvp_lbl_hp.add_theme_font_size_override("font_size", 22)
+	capa_interfaz.add_child(pvp_lbl_hp)
+	pvp_lbl_centro = Label.new()
+	pvp_lbl_centro.add_theme_font_size_override("font_size", 56)
+	pvp_lbl_centro.modulate = Color(1, 0.4, 0.4)
+	pvp_lbl_centro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pvp_lbl_centro.position = Vector2(0, 250)
+	pvp_lbl_centro.size = Vector2(1152, 80)
+	capa_interfaz.add_child(pvp_lbl_centro)
+	mp_filas = Control.new()
+	mp_filas.position = Vector2(905, 8)
+	mp_filas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	capa_interfaz.add_child(mp_filas)
+	pvp_actualizar_hud()
+
+
+func pvp_actualizar_hud():
+	if not is_instance_valid(mp_filas) or not is_instance_valid(pvp_barra):
+		return
+	var yo = multiplayer.get_unique_id()
+	var hp = maxi(int(mp.hp.get(yo, PVP_HP)), 0)
+	pvp_barra.size.x = 220.0 * hp / float(PVP_HP)
+	pvp_barra.color = Color(0.2, 0.9, 0.3).lerp(Color(0.95, 0.15, 0.1), 1.0 - hp / float(PVP_HP))
+	pvp_lbl_hp.text = "%d HP" % hp
+	for h in mp_filas.get_children():
+		h.queue_free()
+	var y = 0
+	var ids = mp.nombres.keys()
+	ids.sort()
+	for id in ids:
+		if id == yo:
+			continue
+		var l = Label.new()
+		l.text = "%s  K%d" % [str(mp.nombres[id]).left(8), int(mp.kills.get(id, 0))]
+		l.add_theme_font_size_override("font_size", 18)
+		l.modulate = pvp_color(id)
+		l.position = Vector2(0, y)
+		mp_filas.add_child(l)
+		var fondo = ColorRect.new()
+		fondo.color = Color(0.2, 0.2, 0.2, 0.8)
+		fondo.size = Vector2(150, 6)
+		fondo.position = Vector2(0, y + 25)
+		fondo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		mp_filas.add_child(fondo)
+		var barra = ColorRect.new()
+		barra.color = pvp_color(id)
+		barra.size = Vector2(150.0 * clampf(float(mp.hp.get(id, PVP_HP)) / PVP_HP, 0.0, 1.0), 6)
+		barra.position = Vector2(0, y + 25)
+		barra.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		mp_filas.add_child(barra)
+		for v in range(PVP_VIDAS - int(mp.muertes.get(id, 0))):
+			var pip = ColorRect.new()
+			pip.color = Color(1, 0.2, 0.2)
+			pip.size = Vector2(8, 8)
+			pip.position = Vector2(100 + v * 12, y + 5)
+			pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			mp_filas.add_child(pip)
+		y += 40
+
+
+# ---------- Cada fotograma ----------
+func pvp_objetivo() -> Array:
+	# Rival vivo más cercano: [posición, distancia] (vacío si no hay)
+	var yo = multiplayer.get_unique_id()
+	var mejor = []
+	for id in mp.nombres:
+		if id == yo or pvp_es_equipo(id, yo) or not mp.vivo.get(id, true) or not mp.pos.has(id):
+			continue
+		var p: Vector2 = mp.pos[id]
+		var d = jugador.position.distance_to(p)
+		if d <= PVP_LEJOS and (mejor.is_empty() or d < mejor[1]):
+			mejor = [p, d]
+	return mejor
+
+
+func pvp_procesar(delta):
+	if jugador == null:
+		return
+	pvp_cd -= delta
+	if pvp_inv > 0.0:
+		pvp_inv -= delta
+		jugador.modulate = Color(1, 1, 1, 1.0 if int(pvp_inv * 8) % 2 == 0 else 0.3)
+		if pvp_inv <= 0.0:
+			jugador.modulate = Color(1, 1, 1, 1)
+	var yo = multiplayer.get_unique_id()
+	var activo = pvp_vivo and not mp_congelado and pausa_capa == null
+	if activo:
+		var es_tel = dispositivo_actual == "telefono"
+		var quiere_disparar = false
+		if es_tel:
+			var d = direccion_pulsada()
+			if d != Vector2.ZERO:
+				mirando = d.normalized()
+			quiere_disparar = fuego_tactil
+			# Aimbot de teléfono: de lejos SOLO apunta; de muy cerca también dispara solo
+			var obj = pvp_objetivo()
+			if not obj.is_empty():
+				mirando = (obj[0] - jugador.position).normalized()
+				if obj[1] <= PVP_CERCA:
+					quiere_disparar = true
+		else:
+			var haz = get_global_mouse_position() - jugador.position
+			if haz.length() > 4.0:
+				mirando = haz.normalized()
+			quiere_disparar = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+		if arma_nodo:
+			arma_nodo.rotation = mirando.angle()
+			arma_nodo.scale.y = -1.0 if mirando.x < 0 else 1.0
+		if quiere_disparar and pvp_cd <= 0.0:
+			pvp_cd = PVP_CADENCIA
+			pvp_serial += 1
+			var origen = jugador.position + mirando * 32.0
+			pvp_crear_bala(yo, pvp_serial, origen, mirando)
+			pvp_disparo.rpc(pvp_serial, origen, mirando)
+	pvp_mover_balas(delta)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func pvp_disparo(serial: int, origen: Vector2, dir: Vector2):
+	if mp.get("pvp", false) and mp.en_carrera:
+		pvp_crear_bala(multiplayer.get_remote_sender_id(), serial, origen, dir)
+
+
+func pvp_crear_bala(tirador: int, serial: int, origen: Vector2, dir: Vector2):
+	var nodo = ColorRect.new()
+	nodo.size = Vector2(12, 12)
+	nodo.pivot_offset = Vector2(6, 6)
+	nodo.color = pvp_color(tirador).lerp(Color(0, 0, 0), 0.25)
+	nodo.position = origen - Vector2(6, 6)
+	nodo.z_index = 5
+	nodo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	nodo.add_to_group("pvp_nodos")
+	add_child(nodo)
+	pvp_balas.append({"tirador": tirador, "serial": serial, "pos": origen, "origen": origen,
+		"vel": dir.normalized() * PVP_VEL_BALA, "nodo": nodo})
+
+
+func pvp_quitar_bala(tirador: int, serial: int):
+	for i in range(pvp_balas.size()):
+		if pvp_balas[i]["tirador"] == tirador and pvp_balas[i]["serial"] == serial:
+			if is_instance_valid(pvp_balas[i]["nodo"]):
+				pvp_balas[i]["nodo"].queue_free()
+			pvp_balas.remove_at(i)
+			return
+
+
+func pvp_mover_balas(delta):
+	var yo = multiplayer.get_unique_id()
+	var caja_yo = Rect2()
+	if jugador:
+		caja_yo = Rect2(jugador.position - Vector2(27, 27), Vector2(54, 54))
+	var quitar = []
+	for b in pvp_balas:
+		b["pos"] += b["vel"] * delta
+		b["nodo"].position = b["pos"] - Vector2(6, 6)
+		var p: Vector2 = b["pos"]
+		var recorrido = p.distance_to(b["origen"])
+		var muere = recorrido > PVP_ALCANCE or p.x < -20 or p.y < -20 or p.x > columnas * tamaño_bloque + 20 or p.y > filas * tamaño_bloque + 20
+		if not muere:
+			for r in pvp_obstaculos:
+				if r.has_point(p):
+					muere = true
+					break
+		# Solo mi propio jugador decide si lo golpean a mí
+		if not muere and b["tirador"] != yo and pvp_vivo and pvp_inv <= 0.0 and not pvp_es_equipo(b["tirador"], yo) and caja_yo.has_point(p):
+			var t_dist = clampf(recorrido / PVP_ALCANCE, 0.0, 1.0)
+			var dano = int(round(lerpf(40.0, 10.0, t_dist)))  # más cerca = más daño
+			pvp_hp = maxi(pvp_hp - dano, 0)
+			pvp_impacto.rpc(b["tirador"], b["serial"], pvp_hp)
+			pvp_aplicar_impacto(yo, b["tirador"], b["serial"], pvp_hp)
+			return
+		if muere:
+			quitar.append(b)
+	for b in quitar:
+		if is_instance_valid(b["nodo"]):
+			b["nodo"].queue_free()
+		pvp_balas.erase(b)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func pvp_impacto(tirador: int, serial: int, hp: int):
+	if mp.get("pvp", false):
+		pvp_aplicar_impacto(multiplayer.get_remote_sender_id(), tirador, serial, hp)
+
+
+func pvp_aplicar_impacto(victima: int, tirador: int, serial: int, hp: int):
+	pvp_quitar_bala(tirador, serial)
+	mp.hp[victima] = hp
+	if hp <= 0 and mp.vivo.get(victima, true):
+		mp.vivo[victima] = false
+		mp.muertes[victima] = int(mp.muertes.get(victima, 0)) + 1
+		mp.kills[tirador] = int(mp.kills.get(tirador, 0)) + 1
+		if victima == multiplayer.get_unique_id():
+			pvp_morir()
+		if mp.host:
+			pvp_revisar_fin()
+	pvp_actualizar_hud()
+
+
+# Perdiste una vida: 10 s esperando y reapareces con la vida llena
+func pvp_morir():
+	pvp_vivo = false
+	corazones = maxi(PVP_VIDAS - int(mp.muertes.get(multiplayer.get_unique_id(), 0)), 0)
+	actualizar_corazones()
+	if jugador:
+		jugador.visible = false
+		jugador.collision_layer = 0
+		jugador.set_physics_process(false)
+	if corazones <= 0:
+		return  # última vida: la partida termina
+	for s in range(PVP_RESPAWN, 0, -1):
+		if is_instance_valid(pvp_lbl_centro):
+			pvp_lbl_centro.text = t("pvp_respawn") % s
+		await get_tree().create_timer(1.0).timeout
+		if not mp.get("pvp", false) or not mp.en_carrera:
+			return
+	if is_instance_valid(pvp_lbl_centro):
+		pvp_lbl_centro.text = ""
+	pvp_hp = PVP_HP
+	pvp_vivo = true
+	pvp_inv = 2.0
+	mp.hp[multiplayer.get_unique_id()] = PVP_HP
+	mp.vivo[multiplayer.get_unique_id()] = true
+	if jugador:
+		jugador.position = pvp_punto(multiplayer.get_unique_id())
+		jugador.visible = true
+		jugador.collision_layer = 1
+		jugador.set_physics_process(true)
+	pvp_revivir.rpc()
+	pvp_actualizar_hud()
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func pvp_revivir():
+	var id = multiplayer.get_remote_sender_id()
+	mp.hp[id] = PVP_HP
+	mp.vivo[id] = true
+
+
+# ---------- Final de la partida (decide el host) ----------
+func pvp_revisar_fin():
+	if not mp.get("pvp", false) or pvp_fin_enviado or not mp.en_carrera:
+		return
+	var terminar = false
+	var equipos_presentes = {}
+	for id in mp.nombres:
+		equipos_presentes[mp.equipos.get(id, 0)] = true
+		if int(mp.muertes.get(id, 0)) >= PVP_VIDAS:
+			terminar = true
+	if equipos_presentes.size() < 2:
+		terminar = true
+	if terminar:
+		pvp_fin_enviado = true
+		pvp_terminar()
+
+
+func pvp_terminar():
+	var datos = {}
+	for id in mp.nombres:
+		datos[id] = {"k": int(mp.kills.get(id, 0)), "m": int(mp.muertes.get(id, 0)), "hp": maxi(int(mp.hp.get(id, 0)), 0)}
+	var ganadores = []
+	var ids = mp.nombres.keys()
+	ids.sort()
+	if ids.size() == 2:
+		# 1v1: gana el que tiene más vida (vidas que le quedan y luego HP)
+		var a = ids[0]
+		var b = ids[1]
+		var pa = (PVP_VIDAS - datos[a]["m"]) * 1000 + datos[a]["hp"]
+		var pb = (PVP_VIDAS - datos[b]["m"]) * 1000 + datos[b]["hp"]
+		if pa > pb:
+			ganadores = [a]
+		elif pb > pa:
+			ganadores = [b]
+	else:
+		# Más jugadores: gana el equipo/jugador con más kills (si empatan, con más vidas)
+		var kills_eq = {}
+		var vidas_eq = {}
+		for id in ids:
+			var e = int(mp.equipos.get(id, 0))
+			kills_eq[e] = int(kills_eq.get(e, 0)) + datos[id]["k"]
+			vidas_eq[e] = int(vidas_eq.get(e, 0)) + (PVP_VIDAS - datos[id]["m"])
+		var mejor_e = -1
+		var empate = false
+		for e in kills_eq:
+			if mejor_e == -1 or kills_eq[e] > kills_eq[mejor_e] or (kills_eq[e] == kills_eq[mejor_e] and vidas_eq[e] > vidas_eq[mejor_e]):
+				mejor_e = e
+				empate = false
+			elif kills_eq[e] == kills_eq[mejor_e] and vidas_eq[e] == vidas_eq[mejor_e]:
+				empate = true
+		if not empate:
+			for id in ids:
+				if int(mp.equipos.get(id, 0)) == mejor_e:
+					ganadores.append(id)
+	pvp_fin.rpc({"ganadores": ganadores, "datos": datos, "nombres": mp.nombres, "equipos": mp.equipos})
+
+
+@rpc("authority", "call_local", "reliable")
+func pvp_fin(res: Dictionary):
+	mp.en_carrera = false
+	mp.nombres = res["nombres"]
+	pvp_mostrar_resultados(res)
+
+
+func pvp_mostrar_resultados(res: Dictionary):
+	get_tree().paused = true
+	if is_instance_valid(pausa_capa):
+		pausa_capa.queue_free()
+		pausa_capa = null
+	mp_capa_resultados = CanvasLayer.new()
+	mp_capa_resultados.layer = 110
+	mp_capa_resultados.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(mp_capa_resultados)
+	var fondo = ColorRect.new()
+	fondo.color = Color(0, 0, 0, 1)
+	mp_capa_resultados.add_child(fondo)
+	fondo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var centro = CenterContainer.new()
+	mp_capa_resultados.add_child(centro)
+	centro.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var caja = VBoxContainer.new()
+	caja.add_theme_constant_override("separation", 12)
+	centro.add_child(caja)
+	var titulo = Label.new()
+	titulo.text = t("mp_results")
+	titulo.add_theme_font_size_override("font_size", 60)
+	titulo.modulate = Color(0, 0.6, 1)
+	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caja.add_child(titulo)
+	var gan = Label.new()
+	if res["ganadores"].is_empty():
+		gan.text = t("pvp_draw")
+	else:
+		var nombres_g = []
+		for id in res["ganadores"]:
+			nombres_g.append(str(res["nombres"].get(id, "?")))
+		gan.text = t("pvp_win") % " + ".join(nombres_g)
+	gan.add_theme_font_size_override("font_size", 40)
+	gan.modulate = Color(1, 0.84, 0)
+	gan.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caja.add_child(gan)
+	var ids = res["datos"].keys()
+	ids.sort()
+	for id in ids:
+		var d = res["datos"][id]
+		var l = Label.new()
+		l.text = "%s     K:%d   D:%d   HP:%d" % [str(res["nombres"].get(id, "?")), d["k"], d["m"], d["hp"]]
+		l.add_theme_font_size_override("font_size", 28)
+		l.modulate = COLORES_MP[int(res["equipos"].get(id, 0)) % 4]
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		caja.add_child(l)
+	var volver = crear_boton_en(caja, t("mp_back_lobby"), 420, 70, 30)
+	volver.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	volver.pressed.connect(mp_volver_a_sala)
+	var salir = crear_boton_en(caja, t("mp_leave"), 300, 60, 26)
+	salir.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	salir.pressed.connect(mp_salir)
+	volver.grab_focus.call_deferred()
+
+
+# Fantasmas del PVP: se ven siempre que estén vivos (el mapa es el mismo para todos)
+func pvp_actualizar_fantasmas(delta):
+	var yo = multiplayer.get_unique_id()
+	for id in mp.nombres:
+		if id == yo:
+			continue
+		var g = mp_fantasma(id)
+		var visible_ = mp.vivo.get(id, true) and mp.pos.has(id)
+		g.visible = visible_
+		if visible_:
+			var objetivo: Vector2 = mp.pos[id]
+			if g.position.distance_to(objetivo) > 200.0:
+				g.position = objetivo
+			else:
+				g.position = g.position.lerp(objetivo, clampf(delta * 14.0, 0.0, 1.0))
+	for id in mp_fantasmas.keys():
+		if not mp.nombres.has(id):
+			mp_fantasmas[id].queue_free()
+			mp_fantasmas.erase(id)
+
+
+# ==========================================
 # MODO RACE
 # ==========================================
 # Todos juegan los mismos niveles (misma semilla) y gana quien llega antes a la puerta del último nivel.
 @rpc("authority", "call_local", "reliable")
 func mp_empezar(semilla: int, meta: int):
 	mp.en_carrera = true
+	mp.pvp = false
 	mp.semilla = semilla
 	mp.meta = meta
 	mp.espectando = false
 	mp.llegada = []
 	mp.pos = {}
+	mp.intentos = {}
 	mp.progreso = {}
 	for id in mp.nombres:
 		mp.progreso[id] = 1
@@ -2521,18 +3286,26 @@ func mp_enviar_posicion():
 		return
 	mp_tick += 1
 	if mp_tick % 3 == 0:
-		mp_posicion.rpc(nivel_actual, jugador.position)
+		mp_posicion.rpc(nivel_actual, mp_intento, jugador.position)
 
 
 @rpc("any_peer", "call_remote", "unreliable_ordered")
-func mp_posicion(nivel: int, p: Vector2):
+func mp_posicion(nivel: int, intento: int, p: Vector2):
 	var id = multiplayer.get_remote_sender_id()
 	mp.progreso[id] = nivel
+	mp.intentos[id] = intento
 	mp.pos[id] = p
 
 
 func _process(delta):
 	if not mp.get("en_carrera", false):
+		return
+	if mp.get("pvp", false):
+		mp_hud_t += delta
+		pvp_actualizar_fantasmas(delta)
+		if mp_hud_t >= 0.2:
+			mp_hud_t = 0.0
+			pvp_actualizar_hud()
 		return
 	mp_actualizar_fantasmas(delta)
 	mp_hud_t += delta
@@ -2543,29 +3316,36 @@ func _process(delta):
 			mp_actualizar_espectador()
 
 
+func mp_fantasma(id) -> Node2D:
+	var g = mp_fantasmas.get(id)
+	if g == null:
+		var color = pvp_color(id) if mp.get("pvp", false) else mp_color(id)
+		g = Node2D.new()
+		var s = Sprite2D.new()
+		s.texture = preload("res://icon.svg")
+		s.scale = Vector2(0.4, 0.4)
+		s.modulate = Color(color, 0.55)
+		g.add_child(s)
+		var n = Label.new()
+		n.text = str(mp.nombres.get(id, "?")).left(8)
+		n.add_theme_font_size_override("font_size", 14)
+		n.position = Vector2(-30, -52)
+		n.modulate = color
+		g.add_child(n)
+		add_child(g)
+		mp_fantasmas[id] = g
+	return g
+
+
 # Fantasmas: los demás jugadores que están en tu mismo nivel
 func mp_actualizar_fantasmas(delta):
 	var yo = multiplayer.get_unique_id()
 	for id in mp.nombres:
 		if id == yo:
 			continue
-		var g = mp_fantasmas.get(id)
-		if g == null:
-			g = Node2D.new()
-			var s = Sprite2D.new()
-			s.texture = preload("res://icon.svg")
-			s.scale = Vector2(0.4, 0.4)
-			s.modulate = Color(mp_color(id), 0.5)
-			g.add_child(s)
-			var n = Label.new()
-			n.text = str(mp.nombres[id]).left(8)
-			n.add_theme_font_size_override("font_size", 14)
-			n.position = Vector2(-30, -52)
-			n.modulate = mp_color(id)
-			g.add_child(n)
-			add_child(g)
-			mp_fantasmas[id] = g
-		var visible_ = mp.progreso.get(id, 1) == nivel_actual and mp.pos.has(id) and mp_pos_llegada(id) < 0 and not mp.espectando
+		var g = mp_fantasma(id)
+		# Solo se ve el fantasma si está en tu mismo nivel e intento (el mapa es el mismo). Espectando: solo el que sigues.
+		var visible_ = mp.progreso.get(id, 1) == nivel_actual and int(mp.intentos.get(id, 0)) == mp_intento and mp.pos.has(id) and mp_pos_llegada(id) < 0 and (not mp.espectando or id == mp_seguir)
 		g.visible = visible_
 		if visible_:
 			var objetivo: Vector2 = mp.pos[id]
@@ -2620,6 +3400,9 @@ func mp_recibir_llegada(lista: Array):
 func mp_revisar_fin():
 	if not mp.en_carrera:
 		return
+	if mp.get("pvp", false):
+		pvp_revisar_fin()
+		return
 	for id in mp.nombres:
 		if mp_pos_llegada(id) < 0:
 			return
@@ -2643,40 +3426,66 @@ func mp_tiempo(ms) -> String:
 	return "%02d:%04.1f" % [int(s / 60.0), fmod(s, 60.0)]
 
 
-# El que ya llegó solo puede mirar: ve a los demás moverse en una mini arena
+# El que ya llegó solo puede mirar: ve el mapa real del jugador que sigue (con su nivel) y puede cambiar de jugador
+var mp_seguir = 0
+var mp_vista = [0, -1]
+var mp_lbl_siguiendo: Label
+
+
 func mp_crear_espectador():
+	mp_seguir = 0
+	mp_vista = [0, -1]
 	mp_capa_espectador = CanvasLayer.new()
 	mp_capa_espectador.layer = 97
 	add_child(mp_capa_espectador)
-	var fondo = ColorRect.new()
-	fondo.color = Color(0, 0, 0, 0.92)
-	fondo.size = Vector2(890, 648)
-	mp_capa_espectador.add_child(fondo)
 	mp_lbl_espectador = Label.new()
-	mp_lbl_espectador.add_theme_font_size_override("font_size", 44)
+	mp_lbl_espectador.add_theme_font_size_override("font_size", 30)
 	mp_lbl_espectador.modulate = Color(1, 0.84, 0)
 	mp_lbl_espectador.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	mp_lbl_espectador.position = Vector2(0, 20)
-	mp_lbl_espectador.size = Vector2(890, 60)
+	mp_lbl_espectador.position = Vector2(250, 2)
+	mp_lbl_espectador.size = Vector2(640, 40)
 	mp_capa_espectador.add_child(mp_lbl_espectador)
-	var sub = Label.new()
-	sub.text = t("mp_spectating")
-	sub.add_theme_font_size_override("font_size", 24)
-	sub.modulate = Color(0.6, 0.6, 0.6)
-	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sub.position = Vector2(0, 80)
-	sub.size = Vector2(890, 34)
-	mp_capa_espectador.add_child(sub)
-	mp_arena = ColorRect.new()
-	mp_arena.color = Color(0.08, 0.08, 0.12)
-	mp_arena.size = Vector2(1152 * 0.66, 640 * 0.66)
-	mp_arena.position = Vector2(65, 130)
-	mp_capa_espectador.add_child(mp_arena)
-	mp_puntos = {}
+	var barra = ColorRect.new()
+	barra.color = Color(0, 0, 0, 0.65)
+	barra.position = Vector2(300, 596)
+	barra.size = Vector2(552, 48)
+	barra.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mp_capa_espectador.add_child(barra)
+	var izq = crear_boton_en(mp_capa_espectador, "<", 60, 44, 28)
+	izq.position = Vector2(304, 598)
+	izq.pressed.connect(mp_cambiar_seguido.bind(-1))
+	var der = crear_boton_en(mp_capa_espectador, ">", 60, 44, 28)
+	der.position = Vector2(788, 598)
+	der.pressed.connect(mp_cambiar_seguido.bind(1))
+	mp_lbl_siguiendo = Label.new()
+	mp_lbl_siguiendo.add_theme_font_size_override("font_size", 26)
+	mp_lbl_siguiendo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mp_lbl_siguiendo.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	mp_lbl_siguiendo.position = Vector2(368, 598)
+	mp_lbl_siguiendo.size = Vector2(416, 44)
+	mp_capa_espectador.add_child(mp_lbl_siguiendo)
 	if mp.lider == multiplayer.get_unique_id():
-		var b = crear_boton_en(mp_capa_espectador, t("mp_end_race"), 300, 50, 24)
-		b.position = Vector2(295, 580)
+		var b = crear_boton_en(mp_capa_espectador, t("mp_end_race"), 230, 44, 18)
+		b.position = Vector2(20, 598)
 		b.pressed.connect(mp_accion.bind("terminar", 0))
+	mp_actualizar_espectador()
+
+
+func mp_rivales_activos() -> Array:
+	var lista = []
+	var yo = multiplayer.get_unique_id()
+	for id in mp_ranking():
+		if id != yo and mp_pos_llegada(id) < 0:
+			lista.append(id)
+	return lista
+
+
+func mp_cambiar_seguido(dir: int):
+	var ids = mp_rivales_activos()
+	if ids.is_empty():
+		return
+	var i = ids.find(mp_seguir)
+	mp_seguir = ids[(i + dir + ids.size()) % ids.size()] if i >= 0 else ids[0]
 	mp_actualizar_espectador()
 
 
@@ -2686,25 +3495,36 @@ func mp_actualizar_espectador():
 	var yo = multiplayer.get_unique_id()
 	var puesto = mp_pos_llegada(yo)
 	mp_lbl_espectador.text = t("mp_finished") + ("  %d/%d  %s" % [puesto + 1, mp.nombres.size(), mp_tiempo(mp.llegada[puesto][1])] if puesto >= 0 else "")
-	for id in mp.nombres:
-		if id == yo:
-			continue
-		var punto = mp_puntos.get(id)
-		if punto == null:
-			punto = ColorRect.new()
-			punto.size = Vector2(22, 22)
-			punto.color = mp_color(id)
-			var n = Label.new()
-			n.add_theme_font_size_override("font_size", 16)
-			n.position = Vector2(-10, -22)
-			punto.add_child(n)
-			mp_arena.add_child(punto)
-			mp_puntos[id] = punto
-		var termino = mp_pos_llegada(id) >= 0
-		punto.visible = mp.pos.has(id) and not termino
-		if punto.visible:
-			punto.position = (mp.pos[id] as Vector2) * 0.66 - Vector2(11, 11)
-			punto.get_child(0).text = "%s L%d" % [str(mp.nombres[id]).left(8), int(mp.progreso.get(id, 1))]
+	# Si el que seguías ya terminó o se fue, pasa al mejor que siga corriendo
+	var activos = mp_rivales_activos()
+	if not activos.has(mp_seguir):
+		mp_seguir = activos[0] if not activos.is_empty() else 0
+	if mp_seguir == 0:
+		mp_lbl_siguiendo.text = "-"
+		return
+	var nivel = int(mp.progreso.get(mp_seguir, 1))
+	var intento = int(mp.intentos.get(mp_seguir, 0))
+	mp_lbl_siguiendo.text = "%s  -  %s %d" % [str(mp.nombres.get(mp_seguir, "?")).left(10), t("level"), nivel]
+	mp_lbl_siguiendo.modulate = mp_color(mp_seguir)
+	# Mostramos el mismo mapa que está jugando ese jugador (misma semilla, mismo nivel e intento)
+	if mp_vista[0] != nivel or mp_vista[1] != intento:
+		mp_vista = [nivel, intento]
+		nivel_actual = nivel
+		mp_intento = intento
+		texto_nivel.text = t("level") + ": " + str(nivel)
+		mp_generar_vista.call_deferred()
+	# Sin oscuridad ni linterna: el espectador ve todo
+	oscuridad.color = Color(1, 1, 1)
+	if luz_jugador:
+		luz_jugador.enabled = false
+	if jugador:
+		jugador.visible = false
+	texto_memoria.visible = false
+
+
+func mp_generar_vista():
+	if mp.espectando and mp.en_carrera:
+		generar_mapa_procedural()
 
 
 func mp_mostrar_resultados():
@@ -2885,6 +3705,9 @@ func actualizar_corazones():
 func _physics_process(delta):
 	if mp.get("en_carrera", false):
 		mp_enviar_posicion()
+		if mp.get("pvp", false):
+			pvp_procesar(delta)
+			return
 		if mp.espectando:
 			return
 	# Niveles 26 a 35 (y los nuevos 41 a 45): bloques slime
@@ -2938,6 +3761,9 @@ func _physics_process(delta):
 
 
 func recibir_dano():
+	# Sticky situation: cualquier daño en los niveles con slimes reinicia la racha
+	if en_nivel_con_slimes():
+		racha_slime = 0
 	# Hitbox master: en los niveles 11 a 15 cuenta perder un corazón ROJO.
 	# Perder el dorado (el 4.º corazón) no cuenta.
 	if nivel_actual >= nivel_lento_desde and nivel_actual <= nivel_lento_hasta and corazones <= 3:
@@ -3285,7 +4111,7 @@ func actualizar_pico():
 	if jugador == null:
 		return
 	var pico = jugador.get_node_or_null("Pico")
-	if mod_activo != "minero":
+	if accesorio_activo != "minero":
 		if pico:
 			pico.queue_free()
 		return
@@ -3443,8 +4269,35 @@ func generar_nivel_slime():
 					continue
 				celdas_rojas.append(Vector2i(x, y))
 	celdas_rojas.shuffle()
+	var ocupadas = {}
 	for i in range(min(rojos_total, celdas_rojas.size())):
 		colocar_bloque_rojo(celdas_rojas[i].x, celdas_rojas[i].y)
+		ocupadas[celdas_rojas[i]] = true
+
+	# Niveles 41 a 45: terreno variado dentro de las salas (bloques de mapa sueltos arriba, abajo
+	# y en medio). Se rompen sin gastar el slime. Nunca tapan la fila de disparo, la de aterrizaje,
+	# la columna del slime ni la zona de la linterna, y como mucho 3 seguidos por columna: siempre hay camino.
+	if nivel_actual >= nivel_slime2:
+		for k in range(n):
+			var lo2 = 0 if k == 0 else puertas[k - 1] + 1
+			var hi2 = puertas[k] - 1
+			for x in range(lo2 + 2, hi2 + 1):
+				if randf() > 0.85:
+					continue
+				var largo = randi_range(1, 3)
+				var y0 = randi_range(0, filas - largo)
+				if randf() < 0.4:
+					y0 = 0 if randf() < 0.5 else filas - largo  # pegado al techo o al suelo
+				for dy in range(largo):
+					var y = y0 + dy
+					if y == filas_paso[k] or (k > 0 and y == filas_paso[k - 1]) or ocupadas.has(Vector2i(x, y)):
+						continue  # esas celdas se dejan libres para que siempre haya camino
+					if k == 0 and (y == 5 or x < 3 or y == 3):
+						continue
+					var bloque = colocar_pared(x, y)
+					bloque.set_meta("terreno", true)
+					bloque.modulate = Color(0.8, 0.8, 0.9)
+					ocupadas[Vector2i(x, y)] = true
 
 	# Mini tutorial del nivel 26: texto y flechas parpadeantes
 	if nivel_actual == nivel_slime:
@@ -4390,6 +5243,8 @@ func procesar_slime(delta):
 	# Mientras sales disparado: se revisa cuándo termina el impulso
 	if impulsando:
 		var restante = float(jugador.get("tiempo_impulso"))
+		if not vuelo_cruzo and jugador_dentro_de_pasa():
+			vuelo_cruzo = true  # cruzaste un bloque fantasma: el disparo cuenta como bueno
 		if restante <= 0.0:
 			if jugador_dentro_de_pasa():
 				jugador.set("tiempo_impulso", 0.05)  # sigue hasta salir del bloque fantasma
@@ -4459,6 +5314,29 @@ func procesar_slime(delta):
 
 
 # El slime te dispara hacia el lado contrario. La fuerza depende de los segundos cargados (1, 2 o 3)
+# Resultado de cada disparo de slime: cuenta para "Sticky situation" (slimes seguidos sin fallar)
+func registrar_resultado_vuelo():
+	if debug_activo or reiniciando or not en_nivel_con_slimes():
+		vuelo_cruzo = false
+		return
+	if vuelo_cruzo:
+		racha_slime += 1
+		if racha_slime >= RACHA_PARA_LOGRO and not logro_sticky:
+			logro_sticky = true
+			guardar_logros()
+			mostrar_mensaje(t("ach_sticky_msg"), Color(1, 0.84, 0), 250)
+		elif racha_slime % 10 == 0 and racha_slime < RACHA_PARA_LOGRO:
+			mostrar_mensaje(t("sticky_progress") % [racha_slime, RACHA_PARA_LOGRO], Color(0.4, 1, 0.4), 330)
+	else:
+		racha_slime = 0  # te quedaste corto: la racha vuelve a empezar
+	vuelo_cruzo = false
+
+
+# Niveles con slimes que se empujan: 26 a 35 y 41 a 45
+func en_nivel_con_slimes() -> bool:
+	return (nivel_actual >= nivel_slime and nivel_actual < nivel_armas) or nivel_actual >= nivel_slime2
+
+
 func lanzar_jugador():
 	var fuerza = clampi(int(slime_tiempo), 1, 3)
 	var duracion = float(tiempos_impulso[fuerza - 1])
@@ -4472,6 +5350,7 @@ func lanzar_jugador():
 	jugador.set("impulso", -slime_dir * velocidad_impulso)
 	jugador.set("tiempo_impulso", duracion)
 	impulsando = true
+	vuelo_cruzo = false
 	cancelar_cuenta_slime()
 
 	# Niveles nuevos (41 a 45): el slime sirve una sola vez
@@ -4489,6 +5368,7 @@ func lanzar_jugador():
 
 func terminar_impulso():
 	impulsando = false
+	registrar_resultado_vuelo()
 	if debug_activo:
 		return  # con debug los fantasmas siempre se atraviesan
 	for pasa in get_tree().get_nodes_in_group("pasas"):
@@ -4524,9 +5404,13 @@ func consumir_slime(s: Node):
 # Un muro se puede romper solo si el slime de su sala ya se gastó (así no te saltas el reto)
 func pared_rompible(p: Node) -> bool:
 	var col = int(round(p.position.x / tamaño_bloque))
+	if p.has_meta("terreno"):
+		return true  # el terreno suelto se rompe siempre, sin gastar slime
 	var k = puertas_nivel.find(col)
 	if k < 0:
 		return false
+	if accesorio_activo == "minero":
+		return true  # con el pico no hace falta gastar el slime antes
 	var col_slime = 0 if k == 0 else int(puertas_nivel[k - 1]) + 1
 	return slimes_usados_col.has(col_slime)
 
@@ -4582,7 +5466,7 @@ func procesar_romper(delta):
 				tiempo_golpe = 0.0
 				pared.modulate = Color(1.8, 0.8, 0.8)
 				pared.create_tween().tween_property(pared, "modulate", Color(1, 1, 1), 0.15)
-				if golpes_pared >= golpes_para_romper:
+				if golpes_pared >= golpes_necesarios():
 					romper_pared(pared)
 					reiniciar_romper()
 					return
@@ -4596,6 +5480,13 @@ func procesar_romper(delta):
 				golpe_listo = true
 			if tiempo_golpe > 2.5:
 				reiniciar_romper()
+
+
+# Con el pico (accesorio Minero) rompes cada bloque con un golpe menos: 3 -> 2
+func golpes_necesarios() -> int:
+	if accesorio_activo == "minero":
+		return maxi(1, golpes_para_romper - 1)
+	return golpes_para_romper
 
 
 func romper_pared(p: Node):
@@ -4652,6 +5543,7 @@ func colocar_pared(x, y, traspasable = false):
 	if skin != null:
 		poner_skin(nueva_pared, skin)
 	add_child(nueva_pared)
+	return nueva_pared
 
 
 # Doble pulsación de flecha arriba (en menos de 0.5 s) en el nivel 10:
@@ -4967,6 +5859,7 @@ func desbloquear_todos_logros():
 	logro_slimekiller = true
 	logro_piedras = true
 	logro_minero = true
+	logro_sticky = true
 	piedras_rotas = maxi(piedras_rotas, PIEDRAS_PARA_LOGRO)
 	guardar_logros()
 	cerrar_consola()
@@ -5149,6 +6042,8 @@ func _on_linterna_tomada(body, area):
 	if body != jugador or tiene_linterna:
 		return
 	tiene_linterna = true
+	if impulsando:
+		vuelo_cruzo = true  # llegaste a la linterna volando: el disparo cuenta como bueno
 	area.queue_free()
 
 	# Con la linterna los bloques negros dejan de bloquearte (y se ven apenas)
@@ -5280,6 +6175,7 @@ func cargar_logros():
 		logro_slimekiller = archivo.get_value("logros", "slimekiller", false)
 		logro_piedras = archivo.get_value("logros", "piedras_logro", false)
 		logro_minero = archivo.get_value("logros", "minero", false)
+		logro_sticky = archivo.get_value("logros", "sticky", false)
 		piedras_rotas = int(archivo.get_value("logros", "piedras", 0))
 		tutorial_dash_completo = archivo.get_value("logros", "tutorial_dash", false)
 		nombre_bloqueado = archivo.get_value("perfil", "bloqueado", false)
@@ -5289,6 +6185,12 @@ func cargar_logros():
 			idioma = "en"
 		mods_instalados = archivo.get_value("mods", "instalados", ["base"])
 		mod_activo = archivo.get_value("mods", "activo", "base")
+		accesorio_activo = archivo.get_value("mods", "accesorio", "")
+		# Migración: en la 3.9.0 el pico era un mod; ahora es un accesorio
+		if mod_activo == "minero":
+			mod_activo = "base"
+			accesorio_activo = "minero"
+		mods_instalados.erase("minero")
 		# Seguridad: el mod activo siempre debe estar instalado
 		if not mods_instalados.has("base"):
 			mods_instalados.append("base")
@@ -5299,10 +6201,8 @@ func cargar_logros():
 			mods_instalados.erase("ils")
 			if mod_activo == "ils":
 				mod_activo = "base"
-		if not mod_desbloqueado("minero"):
-			mods_instalados.erase("minero")
-			if mod_activo == "minero":
-				mod_activo = "base"
+		if accesorio_activo != "" and not accesorio_desbloqueado(accesorio_activo):
+			accesorio_activo = ""
 
 
 func guardar_logros():
@@ -5316,12 +6216,14 @@ func guardar_logros():
 	archivo.set_value("logros", "slimekiller", logro_slimekiller)
 	archivo.set_value("logros", "piedras_logro", logro_piedras)
 	archivo.set_value("logros", "minero", logro_minero)
+	archivo.set_value("logros", "sticky", logro_sticky)
 	archivo.set_value("logros", "piedras", piedras_rotas)
 	archivo.set_value("logros", "tutorial_dash", tutorial_dash_completo)
 	archivo.set_value("perfil", "bloqueado", nombre_bloqueado)
 	archivo.set_value("perfil", "nombre", nombre_usuario)
 	archivo.set_value("perfil", "idioma", idioma)
 	archivo.set_value("mods", "instalados", mods_instalados)
+	archivo.set_value("mods", "accesorio", accesorio_activo)
 	archivo.set_value("mods", "activo", mod_activo)
 	archivo.save(ARCHIVO_LOGROS)
 
